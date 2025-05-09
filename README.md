@@ -1,6 +1,6 @@
 # Alpaca MCP Server
 
-This is a Model Context Protocol (MCP) server for Alpaca, allowing LLMs like Claude to interact with the Alpaca trading API. It enables trading stocks, checking positions, fetching market data, and managing your account - all through natural language.
+This is a Model Context Protocol (MCP) server for Alpaca, allowing LLMs like Claude to interact with the Alpaca's trading API. It enables trading stocks; options; and crypto, checking positions, fetching market data, and managing your account - all through natural language.
 
 ## Features
 
@@ -20,8 +20,8 @@ This is a Model Context Protocol (MCP) server for Alpaca, allowing LLMs like Cla
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/alpaca-mcp.git
-   cd alpaca-mcp
+   git clone https://github.com/YOUR_USERNAME/mcp-server-alpaca-trading-api.git
+   cd mcp-server-alpaca-trading-api
    ```
 
 2. Install the required packages:
@@ -84,6 +84,7 @@ The server exposes the following tools:
 - `place_limit_order(symbol, side, quantity, limit_price)` - Place a limit order
 - `cancel_all_orders()` - Cancel all open orders
 - `close_all_positions(cancel_orders)` - Close all open positions
+- TBD
 
 ## Example Queries
 
