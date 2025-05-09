@@ -1,0 +1,11 @@
+[project]
+name = "mcp_server_alpaca_trading_api"
+version = "0.1.0"
+description = "Alpaca Trading API MCP Server"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alpaca-py>=0.39.1",
+    "mcp[cli]>=1.6.0",
+    "python-dotenv>=1.0.0"
+]
