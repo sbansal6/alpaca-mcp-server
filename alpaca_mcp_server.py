@@ -3,8 +3,8 @@ from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timedelta, date
 from mcp.server.fastmcp import FastMCP
 from alpaca.trading.client import TradingClient
-from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest
-from alpaca.trading.enums import OrderSide, TimeInForce, QueryOrderStatus, AssetStatus, CorporateActionType, CorporateActionDateType, OrderType, PositionIntent, ContractType
+from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest, OptionLatestQuoteRequest, OptionLegRequest
+from alpaca.trading.enums import OrderSide, TimeInForce, QueryOrderStatus, AssetStatus, CorporateActionType, CorporateActionDateType, OrderType, PositionIntent, ContractType, OptionsFeed, OrderClass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest, StockLatestQuoteRequest, StockTradesRequest, StockLatestTradeRequest, StockLatestBarRequest
@@ -447,7 +447,7 @@ async def get_orders(status: str = "all", limit: int = 10) -> str:
         return f"Error fetching orders: {str(e)}"
 
 @mcp.tool()
-async def place_market_order(symbol: str, side: str, quantity: float) -> str:
+async def place_stock_market_order(symbol: str, side: str, quantity: float) -> str:
     """
     Places a market order and returns the order details.
     
@@ -1037,8 +1037,168 @@ async def get_option_contracts(
         
     except Exception as e:
         return f"Error fetching option contracts: {str(e)}"
-    
 
+@mcp.tool()
+async def get_option_latest_quote(
+    symbol: str,
+    feed: Optional[OptionsFeed] = None
+) -> str:
+    """
+    Retrieves and formats the latest quote for an option contract.
+    
+    Args:
+        symbol (str): The option contract symbol (e.g., 'O:AAPL230616C00150000')
+        feed (Optional[OptionsFeed]): The source feed of the data (opra or indicative).
+            Default: opra if the user has the options subscription, indicative otherwise.
+    
+    Returns:
+        str: Formatted string containing the latest quote information including:
+            - Ask Price
+            - Bid Price
+            - Ask Size
+            - Bid Size
+            - Timestamp
+    """
+    try:
+        # Create the request object
+        request = OptionLatestQuoteRequest(
+            symbol_or_symbols=symbol,
+            feed=feed
+        )
+        
+        # Get the latest quote
+        quotes = option_historical_data_client.get_option_latest_quote(request)
+        
+        if symbol in quotes:
+            quote = quotes[symbol]
+            return f"""
+                Latest Quote for {symbol}:
+                ------------------------
+                Ask Price: ${float(quote.ask_price):.2f}
+                Bid Price: ${float(quote.bid_price):.2f}
+                Ask Size: {quote.ask_size}
+                Bid Size: {quote.bid_size}
+                Timestamp: {quote.timestamp}
+                """
+        else:
+            return f"No quote data found for {symbol}."
+            
+    except Exception as e:
+        return f"Error fetching option quote: {str(e)}"
+
+@mcp.tool()
+async def place_option_market_order(
+    legs: List[Dict[str, Any]],
+    order_class: Optional[OrderClass] = None,
+    quantity: int = 1
+) -> str:
+    """
+    Places a market order for options (single or multi-leg) and returns the order details.
+    
+    Args:
+        legs (List[Dict[str, Any]]): List of option legs, where each leg is a dictionary containing:
+            - symbol (str): Option contract symbol (e.g., 'AAPL230616C00150000')
+            - side (str): 'buy' or 'sell'
+            - ratio_qty (int): Quantity ratio for the leg
+        order_class (Optional[OrderClass]): Order class (SIMPLE, BRACKET, OCO, OTO, MLEG)
+            Defaults to SIMPLE for single leg, MLEG for multi-leg
+        quantity (int): Base quantity for the order (default: 1)
+    
+    Returns:
+        str: Formatted string containing order details
+    """
+    try:
+        # Validate legs
+        if not legs:
+            return "Error: No option legs provided"
+        
+        # Validate quantity
+        if quantity <= 0:
+            return "Error: Quantity must be positive"
+        
+        # Determine order class if not provided
+        if order_class is None:
+            order_class = OrderClass.MLEG if len(legs) > 1 else OrderClass.SIMPLE
+        
+        # Convert legs to OptionLegRequest objects
+        order_legs = []
+        for leg in legs:
+            # Validate ratio_qty
+            if not isinstance(leg['ratio_qty'], int) or leg['ratio_qty'] <= 0:
+                return f"Error: Invalid ratio_qty for leg {leg['symbol']}. Must be positive integer."
+            
+            # Convert side string to enum
+            if leg['side'].lower() == "buy":
+                order_side = OrderSide.BUY
+            elif leg['side'].lower() == "sell":
+                order_side = OrderSide.SELL
+            else:
+                return f"Invalid order side: {leg['side']}. Must be 'buy' or 'sell'."
+            
+            order_legs.append(OptionLegRequest(
+                symbol=leg['symbol'],
+                side=order_side,
+                ratio_qty=leg['ratio_qty']
+            ))
+        
+        # Determine position intent based on the first leg for single-leg orders
+        # For multi-leg orders, we'll use BTO as default since it's a spread
+        position_intent = PositionIntent.BTO if order_legs[0].side == OrderSide.BUY else PositionIntent.STO
+        
+        # Create market order request
+        order_data = MarketOrderRequest(
+            qty=quantity,
+            order_class=order_class,
+            time_in_force=TimeInForce.DAY,
+            client_order_id=f"mcp_opt_{int(time.time())}",
+            position_intent=position_intent,
+            type=OrderType.MARKET  # Explicitly set order type
+        )
+        
+        # Add legs only for multi-leg orders
+        if order_class == OrderClass.MLEG:
+            order_data.legs = order_legs
+        else:
+            # For single-leg orders, use the first leg's symbol
+            order_data.symbol = order_legs[0].symbol
+        
+        # Submit order
+        order = trade_client.submit_order(order_data)
+        
+        # Format the response
+        result = f"""
+                Option Market Order Placed Successfully:
+                --------------------------------------
+                Order ID: {order.id}
+                Order Class: {order.order_class}
+                Time In Force: {order.time_in_force}
+                Status: {order.status}
+                Client Order ID: {order.client_order_id}
+                Quantity: {order.qty}
+                Position Intent: {order.position_intent}
+                Type: {order.type}
+                """
+        
+        if order_class == OrderClass.MLEG:
+            result += "\nLegs:\n"
+            for leg in order.legs:
+                result += f"""
+                        Symbol: {leg.symbol}
+                        Side: {leg.side}
+                        Ratio Quantity: {leg.ratio_qty}
+                        -------------------------
+                        """
+        else:
+            result += f"""
+                    Symbol: {order.symbol}
+                    Side: {order_legs[0].side}
+                    -------------------------
+                    """
+        
+        return result
+        
+    except Exception as e:
+        return f"Error placing option order: {str(e)}"
 
 # Run the server
 if __name__ == "__main__":
