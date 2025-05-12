@@ -55,11 +55,37 @@ This is a Model Context Protocol (MCP) server for Alpaca, allowing LLMs like Cla
 
 ### Running the server
 
-Start the server by running:
+1. Make sure you're in the project directory:
+   ```bash
+   cd mcp-server-alpaca-trading-api
+   ```
 
-```bash
-python alpaca_mcp_server.py
-```
+2. If you're using a virtual environment, activate it:
+   ```bash
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. Start the server using one of these methods:
+
+   **Option 1**: Run from the project directory
+   ```bash
+   python alpaca_mcp_server.py
+   ```
+
+   **Option 2**: Run with full path
+   ```bash
+   python /path/to/mcp-server-alpaca-trading-api/alpaca_mcp_server.py
+   ```
+
+   **Option 3**: Run as a module
+   ```bash
+   python -m alpaca_mcp_server
+   ```
+
+The server will start and be ready to accept connections from Claude for Desktop.
 
 ### Configuring Claude for Desktop
 
@@ -74,7 +100,7 @@ python alpaca_mcp_server.py
     "alpaca": {
       "command": "python",
       "args": [
-        "/path/to/alpaca_mcp_server.py"
+        "/path/to/mcp-server-alpaca-trading-api/alpaca_mcp_server.py"
       ],
       "env": {
         "API_KEY_ID": "your_alpaca_api_key",

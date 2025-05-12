@@ -3,15 +3,16 @@ from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timedelta, date
 from mcp.server.fastmcp import FastMCP
 from alpaca.trading.client import TradingClient
-from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest, OptionLatestQuoteRequest, OptionLegRequest, OptionSnapshotRequest
-from alpaca.trading.enums import OrderSide, TimeInForce, QueryOrderStatus, AssetStatus, CorporateActionType, CorporateActionDateType, OrderType, PositionIntent, ContractType, OptionsFeed, OrderClass
+from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest, OptionLegRequest
+from alpaca.trading.enums import OrderSide, TimeInForce, QueryOrderStatus, AssetStatus, CorporateActionType, CorporateActionDateType, OrderType, PositionIntent, ContractType, OrderClass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest, StockLatestQuoteRequest, StockTradesRequest, StockLatestTradeRequest, StockLatestBarRequest
+from alpaca.data.requests import Sort, StockBarsRequest, StockLatestQuoteRequest, StockTradesRequest, StockLatestTradeRequest, StockLatestBarRequest, OptionLatestQuoteRequest, OptionSnapshotRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.data.live.stock import StockDataStream
 from alpaca.trading.models import Order
-from alpaca.data.enums import Sort, DataFeed, SupportedCurrencies
+from alpaca.data.enums import DataFeed, OptionsFeed
+from alpaca.common.enums import SupportedCurrencies
 
 import time
 
@@ -974,8 +975,8 @@ async def get_corporate_announcements(
 async def get_option_contracts(
     underlying_symbol: str,
     expiration_date: Optional[date] = None,
-    strike_price_gte: Optional[float] = None,
-    strike_price_lte: Optional[float] = None,
+    strike_price_gte: Optional[str] = None,
+    strike_price_lte: Optional[str] = None,
     type: Optional[ContractType] = None,
     status: Optional[AssetStatus] = None,
     root_symbol: Optional[str] = None,
@@ -985,10 +986,10 @@ async def get_option_contracts(
     Retrieves and formats option contracts based on specified criteria.
     
     Args:
-        underlying_symbol (str): The symbol of the underlying asset (e.g., 'AAPL')
+        underlying_symbol (str): The symbol of the underlying asset
         expiration_date (Optional[date]): Optional expiration date for the options
-        strike_price_gte (Optional[float]): Optional minimum strike price
-        strike_price_lte (Optional[float]): Optional maximum strike price
+        strike_price_gte (Optional[str]): Optional minimum strike price
+        strike_price_lte (Optional[str]): Optional maximum strike price
         type (Optional[ContractType]): Optional contract type (CALL or PUT)
         status (Optional[AssetStatus]): Optional asset status filter (e.g., ACTIVE)
         root_symbol (Optional[str]): Optional root symbol for the option
