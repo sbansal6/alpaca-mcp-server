@@ -1012,16 +1012,16 @@ async def get_option_contracts(
         )
         
         # Get the option contracts
-        contracts = trade_client.get_option_contracts(request)
+        response = trade_client.get_option_contracts(request)
         
-        if not contracts:
+        if not response or not response.option_contracts:
             return f"No option contracts found for {underlying_symbol} matching the criteria."
         
         # Format the response
         result = f"Option Contracts for {underlying_symbol}:\n"
         result += "----------------------------------------\n"
         
-        for contract in contracts:
+        for contract in response.option_contracts:
             result += f"""
                 Symbol: {contract.symbol}
                 Type: {contract.type}
@@ -1030,7 +1030,7 @@ async def get_option_contracts(
                 Status: {contract.status}
                 Root Symbol: {contract.root_symbol}
                 Underlying Symbol: {contract.underlying_symbol}
-                Exercise Style: {contract.exercise_style}
+                Exercise Style: {contract.style}
                 -------------------------
                 """
         
