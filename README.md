@@ -147,24 +147,70 @@ The server exposes the following tools:
 ## Example Queries
 
 ### Basic Trading
-- "What's my current account balance and buying power?"
-- "Show me my current positions"
-- "Get the latest quote for AAPL"
-- "Show me the price history for TSLA over the last 10 days"
-- "Buy 5 shares of MSFT at market price"
-- "Sell 10 shares of AMZN with a limit price of $130"
+1. What’s my current account balance and buying power?
+2. Show me my current positions.
+3. Buy 10 shares of AAPL at market price.
+4. Sell 5 shares of TSLA with a limit price of $300.
+5. Cancel all open stock orders.
+6. Cancel the order with ID abc123.
+7. Liquidate my entire position in GOOGL.
+8. Close 10% of my position in NVDA.
+9. How many shares of AMZN do I currently hold?
+10. Place a limit order to buy 100 shares of MSFT at $450.
+11. Place a market order to sell 25 shares of META.
 
 ### Option Trading
-- "Show me available option contracts for AAPL expiring next month"
-- "Get the option chain for SPY"
-- "Show me the Greeks for AAPL230616C00150000"
-- "Place a bull put spread on SPY"
-- "Get the latest option quote for AAPL230616P00150000"
+12. Show me available option contracts for AAPL expiring next month.
+13. Get the latest quote for AAPL250616C00150000.
+14. Retrieve the option snapshot for SPY240628P00400000.
+15. Liquidate my position in 2 contracts of QQQ calls expiring next week.
+16. Place a market order to buy 1 call option on AAPL expiring next Friday.
+17. What are the Greeks for TSLA240621P00500000?
+18. Find all option contracts for TSLA with strike prices near $800.
+19. Get all contracts for SPY expiring in June that are call options.
+20. Place a bull call spread using AAPL June options.
 
 ### Market Information
-- "Is the market open right now?"
-- "Show me the market calendar for next week"
-- "Are there any corporate announcements for AAPL?"
+21. Is the US stock market currently open?
+22. What are the market open and close times today?
+23. Show me the market calendar for next week.
+24. Are there any corporate announcements for AAPL this week?
+25. What are the next dividend announcements for SPY?
+26. List earnings announcements coming tomorrow.
+
+### Historical & Real-time Data
+27. Show me AAPL’s daily price history for the last 5 trading days.
+28. What was the closing price of TSLA yesterday?
+29. Get the latest bar for GOOG.
+30. What was the latest trade price for NVDA?
+31. Show me the most recent quote for MSFT.
+32. Retrieve the last 100 trades for AMD.
+33. Show me intraday bars for AMZN from last Tuesday.
+
+### Orders
+34. Show me all my open and filled orders from this week.
+35. What orders do I have for AAPL?
+36. List all limit orders I placed in the past 3 days.
+37. Filter all orders by status: filled.
+38. Get me the order history for yesterday.
+
+### Watchlists
+39. Create a new watchlist called “Tech Stocks” with AAPL, MSFT, and NVDA.
+40. Update my “Favorites” watchlist to include TSLA and AMZN.
+41. What stocks are in my “Dividend Picks” watchlist?
+42. Remove META from my “Growth Portfolio” watchlist.
+43. List all my existing watchlists.
+
+### Asset Information
+44. Search for details about the asset ‘AAPL’.
+45. List all tradeable US equities.
+46. Show me all active crypto assets.
+47. Filter all assets with status ‘active’.
+48. Show me details for the stock with symbol ‘GOOGL’.
+
+### Combined Scenarios
+49. Place a market order to buy 2 AAPL call options and update my “Earnings Bets” watchlist with AAPL.
+50. Get today’s market clock and show me my buying power before placing a limit buy order for TSLA at $180.
 
 ## Note
 

@@ -554,11 +554,11 @@ async def place_limit_order(
         # Create limit order request
         order_data = LimitOrderRequest(
             symbol=symbol,
+            limit_price=limit_price,
             qty=quantity,
             side=order_side,
-            type=OrderType.LIMIT,  # Required parameter
+            type=OrderType.LIMIT,
             time_in_force=TimeInForce.DAY,
-            limit_price=limit_price,
             extended_hours=extended_hours,
             client_order_id=client_order_id or f"limit_{int(time.time())}",
             position_intent=position_intent
@@ -582,6 +582,23 @@ async def place_limit_order(
                 Position Intent: {order.position_intent}
                 Extended Hours: {order.extended_hours}
                 """
+    except APIError as api_error:
+        error_message = str(api_error)
+        if "position_intent" in error_message.lower():
+            return f"""
+            Error: Invalid position intent.
+            
+            The order could not be placed due to an issue with the position intent.
+            Please check:
+            1. Your account has the required permissions
+            2. The order type is supported for your account
+            3. The position intent matches your account type
+            
+            Original error: {error_message}
+            """
+        else:
+            return f"Error placing limit order: {error_message}"
+            
     except Exception as e:
         return f"Error placing limit order: {str(e)}"
 
