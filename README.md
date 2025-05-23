@@ -152,13 +152,47 @@ python -m alpaca_mcp_server
 
 See the “Example Queries” section below for 50 real examples covering everything from trading to corporate data to option strategies.
 
+Thank you for the correction. Based on that, here is the fully updated **`## Note`** section of your `README.md` reflecting:
+
+* That **you must set the keys in both `secret.py` and the Claude for Desktop config**
+* That **live trading is enabled by changing the `paper=False` flag**
+
+---
+
 ## Note
 
-This MCP server connects to Alpaca's paper trading API by default. To enable live trading, change:
+This MCP server connects to Alpaca’s **paper trading API** by default for safe testing.
+To enable **live trading with real funds**, update the following configuration files:
 
-```python
-TradingClient(..., paper=False)
-```
+### 🔐 Set Your API Credentials in Two Places:
+
+1. **Claude for Desktop Configuration**
+
+   In `claude_desktop_config.json`, provide your keys for your live account as environment variables:
+
+   ```json
+   {
+     "mcpServers": {
+       "alpaca": {
+         "command": "python",
+         "args": [
+           "/path/to/alpaca_mcp_server.py"
+         ],
+         "env": {
+           "API_KEY_ID": "your_alpaca_api_key",
+           "API_SECRET_KEY": "your_alpaca_secret_key"
+         }
+       }
+     }
+   }
+   ```
+
+2. **`secret.py` in the project directory**
+
+   ```python
+   API_KEY = "your_alpaca_api_key"
+   API_SECRET = "your_alpaca_secret_key"
+   ```
 
 ## ⚠️ Security Notice
 
