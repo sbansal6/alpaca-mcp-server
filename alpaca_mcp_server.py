@@ -15,7 +15,7 @@ from alpaca.data.enums import DataFeed, OptionsFeed
 from alpaca.common.enums import SupportedCurrencies
 
 import time
-from alpaca.trading.exceptions import APIError
+from alpaca.common.exceptions import APIError
 
 # Please do not change these variables
 trade_api_url = None
@@ -27,10 +27,12 @@ stream_data_wss = None
 mcp = FastMCP("alpaca-trading")
 
 # Initialize Alpaca clients using environment variables
-from dotenv import load_dotenv
-load_dotenv()
-API_KEY = os.getenv("API_KEY_ID")
-API_SECRET = os.getenv("API_SECRET_KEY")
+# Import our secret.py file within the same directory
+import secret
+API_KEY = secret.API_KEY
+API_SECRET = secret.API_SECRET
+PAPER = secret.PAPER
+trade_api_url = secret.trade_api_url
 
 # Check if keys are available
 if not API_KEY or not API_SECRET:
@@ -38,7 +40,7 @@ if not API_KEY or not API_SECRET:
 
 # Initialize clients
 # For trading
-trade_client = TradingClient(API_KEY, API_SECRET, paper=True)
+trade_client = TradingClient(API_KEY, API_SECRET, paper=PAPER)
 # For historical market data
 stock_historical_data_client = StockHistoricalDataClient(API_KEY, API_SECRET)
 # For streaming market data
