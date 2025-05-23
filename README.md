@@ -44,7 +44,7 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    ```bash
    git clone https://github.com/YOUR_USERNAME/mcp-server-alpaca-trading-api.git
    cd mcp-server-alpaca-trading-api
-````
+   ```
 
 2. Install the required packages:
 
