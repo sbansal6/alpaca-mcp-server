@@ -131,6 +131,7 @@ To enable **live trading with real funds**, update the following configuration f
    ```python
    API_KEY = "your_alpaca_api_key"
    API_SECRET = "your_alpaca_secret_key"
+   PAPER = False
    ```
 
 ## Available Tools
