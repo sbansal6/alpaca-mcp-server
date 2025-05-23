@@ -201,14 +201,14 @@ See the “Example Queries” section below for 50 real examples covering everyt
 
 ### Option Trading
 12. Show me available option contracts for AAPL expiring next month.
-13. Get the latest quote for AAPL250616C00150000.
-14. Retrieve the option snapshot for SPY240628P00400000.
+13. Get the latest quote for AAPL250613C00200000.
+14. Retrieve the option snapshot for SPY250627P00400000.
 15. Liquidate my position in 2 contracts of QQQ calls expiring next week.
 16. Place a market order to buy 1 call option on AAPL expiring next Friday.
-17. What are the Greeks for TSLA240621P00500000?
-18. Find all option contracts for TSLA with strike prices near $800.
+17. What are the Greeks for TSLA250620P00500000?
+18. Find all TSLA option contracts with strike prices within 5% of the current market price.
 19. Get all contracts for SPY expiring in June that are call options.
-20. Place a bull call spread using AAPL June options.
+20. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
 
 ### Market Information
 21. Is the US stock market currently open?
