@@ -544,10 +544,8 @@ async def place_limit_order(
         # Convert side string to enum
         if side.lower() == "buy":
             order_side = OrderSide.BUY
-            position_intent = PositionIntent.BTO
         elif side.lower() == "sell":
             order_side = OrderSide.SELL
-            position_intent = PositionIntent.STO
         else:
             return f"Invalid order side: {side}. Must be 'buy' or 'sell'."
         
@@ -560,8 +558,7 @@ async def place_limit_order(
             type=OrderType.LIMIT,
             time_in_force=TimeInForce.DAY,
             extended_hours=extended_hours,
-            client_order_id=client_order_id or f"limit_{int(time.time())}",
-            position_intent=position_intent
+            client_order_id=client_order_id or f"limit_{int(time.time())}"
         )
         
         # Submit order
@@ -579,25 +576,11 @@ async def place_limit_order(
                 Time In Force: {order.time_in_force}
                 Status: {order.status}
                 Client Order ID: {order.client_order_id}
-                Position Intent: {order.position_intent}
                 Extended Hours: {order.extended_hours}
                 """
     except APIError as api_error:
         error_message = str(api_error)
-        if "position_intent" in error_message.lower():
-            return f"""
-            Error: Invalid position intent.
-            
-            The order could not be placed due to an issue with the position intent.
-            Please check:
-            1. Your account has the required permissions
-            2. The order type is supported for your account
-            3. The position intent matches your account type
-            
-            Original error: {error_message}
-            """
-        else:
-            return f"Error placing limit order: {error_message}"
+        return f"Error placing limit order: {error_message}"
             
     except Exception as e:
         return f"Error placing limit order: {str(e)}"
@@ -1346,10 +1329,6 @@ async def place_option_market_order(
                 ratio_qty=leg['ratio_qty']
             ))
         
-        # Determine position intent based on the first leg for single-leg orders
-        # For multi-leg orders, we'll use BTO as default since it's a spread
-        position_intent = PositionIntent.BTO if order_legs[0].side == OrderSide.BUY else PositionIntent.STO
-        
         # Create market order request
         order_data = MarketOrderRequest(
             qty=quantity,
@@ -1357,7 +1336,6 @@ async def place_option_market_order(
             time_in_force=time_in_force,
             extended_hours=extended_hours,
             client_order_id=f"mcp_opt_{int(time.time())}",
-            position_intent=position_intent,
             type=OrderType.MARKET
         )
         
@@ -1365,8 +1343,9 @@ async def place_option_market_order(
         if order_class == OrderClass.MLEG:
             order_data.legs = order_legs
         else:
-            # For single-leg orders, use the first leg's symbol
+            # For single-leg orders, use the first leg's symbol and set position intent
             order_data.symbol = order_legs[0].symbol
+            order_data.position_intent = PositionIntent.BTO if order_legs[0].side == OrderSide.BUY else PositionIntent.STO
         
         # Submit order
         order = trade_client.submit_order(order_data)
