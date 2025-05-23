@@ -15,6 +15,7 @@ from alpaca.data.enums import DataFeed, OptionsFeed
 from alpaca.common.enums import SupportedCurrencies
 
 import time
+from alpaca.trading.exceptions import APIError
 
 # Please do not change these variables
 trade_api_url = None
@@ -658,10 +659,10 @@ async def close_position(symbol: str, qty: Optional[str] = None, percentage: Opt
     Args:
         symbol (str): The symbol of the position to close
         qty (Optional[str]): Optional number of shares to liquidate
-        percentage (Optional[str]): Optional percentage of shares to liquidate
+        percentage (Optional[str]): Optional percentage of shares to liquidate (must result in at least 1 share)
     
     Returns:
-        str: Formatted string containing position closure details
+        str: Formatted string containing position closure details or error message
     """
     try:
         # Create close position request if options are provided
@@ -683,6 +684,21 @@ async def close_position(symbol: str, qty: Optional[str] = None, percentage: Opt
                 Status: {order.status}
                 """
                 
+    except APIError as api_error:
+        error_message = str(api_error)
+        if "42210000" in error_message and "would result in order size of zero" in error_message:
+            return """
+            Error: Invalid position closure request.
+            
+            The requested percentage would result in less than 1 share.
+            Please either:
+            1. Use a higher percentage
+            2. Close the entire position (100%)
+            3. Specify an exact quantity using the qty parameter
+            """
+        else:
+            return f"Error closing position: {error_message}"
+            
     except Exception as e:
         return f"Error closing position: {str(e)}"
     
@@ -983,10 +999,11 @@ async def get_option_contracts(
     limit: Optional[int] = None
 ) -> str:
     """
-    Retrieves and formats option contracts based on specified criteria.
+    Retrieves metadata for option contracts based on specified criteria. This endpoint returns contract specifications
+    and static data, not real-time pricing information.
     
     Args:
-        underlying_symbol (str): The symbol of the underlying asset
+        underlying_symbol (str): The symbol of the underlying asset (e.g., 'AAPL')
         expiration_date (Optional[date]): Optional expiration date for the options
         strike_price_gte (Optional[str]): Optional minimum strike price
         strike_price_lte (Optional[str]): Optional maximum strike price
@@ -996,7 +1013,19 @@ async def get_option_contracts(
         limit (Optional[int]): Optional maximum number of contracts to return
     
     Returns:
-        str: Formatted string containing option contracts information
+        str: Formatted string containing option contract metadata including:
+            - Contract ID and Symbol
+            - Name and Type (Call/Put)
+            - Strike Price and Expiration Date
+            - Exercise Style (American/European)
+            - Contract Size and Status
+            - Open Interest and Close Price
+            - Underlying Asset Information ('underlying_asset_id', 'underlying_symbol', 'underlying_name', 'underlying_exchange')
+            - Trading Status (Tradable/Non-tradable)
+    
+    Note:
+        This endpoint returns contract specifications and static data. For real-time pricing
+        information (bid/ask prices, sizes, etc.), use get_option_latest_quote instead.
     """
     try:
         # Create the request object with all available parameters
@@ -1024,6 +1053,7 @@ async def get_option_contracts(
         for contract in response.option_contracts:
             result += f"""
                 Symbol: {contract.symbol}
+                Name: {contract.name}
                 Type: {contract.type}
                 Strike Price: ${float(contract.strike_price):.2f}
                 Expiration Date: {contract.expiration_date}
@@ -1031,6 +1061,11 @@ async def get_option_contracts(
                 Root Symbol: {contract.root_symbol}
                 Underlying Symbol: {contract.underlying_symbol}
                 Exercise Style: {contract.style}
+                Contract Size: {contract.size}
+                Tradable: {'Yes' if contract.tradable else 'No'}
+                Open Interest: {contract.open_interest}
+                Close Price: ${float(contract.close_price) if contract.close_price else 'N/A'}
+                Close Price Date: {contract.close_price_date}
                 -------------------------
                 """
         
@@ -1045,20 +1080,26 @@ async def get_option_latest_quote(
     feed: Optional[OptionsFeed] = None
 ) -> str:
     """
-    Retrieves and formats the latest quote for an option contract.
+    Retrieves and formats the latest quote for an option contract. This endpoint returns real-time
+    pricing and market data, including bid/ask prices, sizes, and exchange information.
     
     Args:
-        symbol (str): The option contract symbol (e.g., 'O:AAPL230616C00150000')
+        symbol (str): The option contract symbol (e.g., 'AAPL230616C00150000')
         feed (Optional[OptionsFeed]): The source feed of the data (opra or indicative).
             Default: opra if the user has the options subscription, indicative otherwise.
     
     Returns:
         str: Formatted string containing the latest quote information including:
-            - Ask Price
-            - Bid Price
-            - Ask Size
-            - Bid Size
-            - Timestamp
+            - Ask Price and Ask Size
+            - Bid Price and Bid Size
+            - Ask Exchange and Bid Exchange
+            - Trade Conditions
+            - Tape Information
+            - Timestamp (in UTC)
+    
+    Note:
+        This endpoint returns real-time market data. For contract specifications and static data,
+        use get_option_contracts instead.
     """
     try:
         # Create the request object
@@ -1076,9 +1117,13 @@ async def get_option_latest_quote(
                 Latest Quote for {symbol}:
                 ------------------------
                 Ask Price: ${float(quote.ask_price):.2f}
-                Bid Price: ${float(quote.bid_price):.2f}
                 Ask Size: {quote.ask_size}
+                Ask Exchange: {quote.ask_exchange}
+                Bid Price: ${float(quote.bid_price):.2f}
                 Bid Size: {quote.bid_size}
+                Bid Exchange: {quote.bid_exchange}
+                Conditions: {quote.conditions}
+                Tape: {quote.tape}
                 Timestamp: {quote.timestamp}
                 """
         else:
@@ -1087,31 +1132,171 @@ async def get_option_latest_quote(
     except Exception as e:
         return f"Error fetching option quote: {str(e)}"
 
+
+@mcp.tool()
+async def get_option_snapshot(symbol_or_symbols: Union[str, List[str]], feed: Optional[OptionsFeed] = None) -> str:
+    """
+    Retrieves comprehensive snapshots of option contracts including latest trade, quote, implied volatility, and Greeks.
+    This endpoint provides a complete view of an option's current market state and theoretical values.
+    
+    Args:
+        symbol_or_symbols (Union[str, List[str]]): Single option symbol or list of option symbols
+            (e.g., 'AAPL250613P00205000')
+        feed (Optional[OptionsFeed]): The source feed of the data (opra or indicative).
+            Default: opra if the user has the options subscription, indicative otherwise.
+    
+    Returns:
+        str: Formatted string containing a comprehensive snapshot including:
+            - Symbol Information
+            - Latest Quote:
+                * Bid/Ask Prices and Sizes
+                * Exchange Information
+                * Trade Conditions
+                * Tape Information
+                * Timestamp (UTC)
+            - Latest Trade:
+                * Price and Size
+                * Exchange and Conditions
+                * Trade ID
+                * Timestamp (UTC)
+            - Implied Volatility (as percentage)
+            - Greeks:
+                * Delta (directional risk)
+                * Gamma (delta sensitivity)
+                * Rho (interest rate sensitivity)
+                * Theta (time decay)
+                * Vega (volatility sensitivity)
+    """
+    try:
+        # Create snapshot request
+        request = OptionSnapshotRequest(
+            symbol_or_symbols=symbol_or_symbols,
+            feed=feed
+        )
+        
+        # Get snapshots
+        snapshots = option_historical_data_client.get_option_snapshot(request)
+        
+        # Format the response
+        result = "Option Snapshots:\n"
+        result += "================\n\n"
+        
+        # Handle both single symbol and list of symbols
+        symbols = [symbol_or_symbols] if isinstance(symbol_or_symbols, str) else symbol_or_symbols
+        
+        for symbol in symbols:
+            snapshot = snapshots.get(symbol)
+            if snapshot is None:
+                result += f"No data available for {symbol}\n"
+                continue
+                
+            result += f"Symbol: {symbol}\n"
+            result += "-----------------\n"
+            
+            # Latest Quote
+            if snapshot.latest_quote:
+                quote = snapshot.latest_quote
+                result += f"Latest Quote:\n"
+                result += f"  Bid Price: ${quote.bid_price:.3f}\n"
+                result += f"  Bid Size: {quote.bid_size}\n"
+                result += f"  Bid Exchange: {quote.bid_exchange}\n"
+                result += f"  Ask Price: ${quote.ask_price:.3f}\n"
+                result += f"  Ask Size: {quote.ask_size}\n"
+                result += f"  Ask Exchange: {quote.ask_exchange}\n"
+                if quote.conditions:
+                    result += f"  Conditions: {quote.conditions}\n"
+                if quote.tape:
+                    result += f"  Tape: {quote.tape}\n"
+                result += f"  Timestamp: {quote.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f %Z')}\n"
+            
+            # Latest Trade
+            if snapshot.latest_trade:
+                trade = snapshot.latest_trade
+                result += f"Latest Trade:\n"
+                result += f"  Price: ${trade.price:.3f}\n"
+                result += f"  Size: {trade.size}\n"
+                if trade.exchange:
+                    result += f"  Exchange: {trade.exchange}\n"
+                if trade.conditions:
+                    result += f"  Conditions: {trade.conditions}\n"
+                if trade.tape:
+                    result += f"  Tape: {trade.tape}\n"
+                if trade.id:
+                    result += f"  Trade ID: {trade.id}\n"
+                result += f"  Timestamp: {trade.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f %Z')}\n"
+            
+            # Implied Volatility
+            if snapshot.implied_volatility is not None:
+                result += f"Implied Volatility: {snapshot.implied_volatility:.2%}\n"
+            
+            # Greeks
+            if snapshot.greeks:
+                greeks = snapshot.greeks
+                result += f"Greeks:\n"
+                result += f"  Delta: {greeks.delta:.4f}\n"
+                result += f"  Gamma: {greeks.gamma:.4f}\n"
+                result += f"  Rho: {greeks.rho:.4f}\n"
+                result += f"  Theta: {greeks.theta:.4f}\n"
+                result += f"  Vega: {greeks.vega:.4f}\n"
+            
+            result += "\n"
+        
+        return result
+        
+    except Exception as e:
+        return f"Error retrieving option snapshots: {str(e)}"
+
 @mcp.tool()
 async def place_option_market_order(
     legs: List[Dict[str, Any]],
     order_class: Optional[OrderClass] = None,
-    quantity: int = 1
+    quantity: int = 1,
+    time_in_force: TimeInForce = TimeInForce.DAY,
+    extended_hours: bool = False
 ) -> str:
     """
     Places a market order for options (single or multi-leg) and returns the order details.
+    Supports up to 4 legs for multi-leg orders.
     
     Args:
         legs (List[Dict[str, Any]]): List of option legs, where each leg is a dictionary containing:
             - symbol (str): Option contract symbol (e.g., 'AAPL230616C00150000')
             - side (str): 'buy' or 'sell'
-            - ratio_qty (int): Quantity ratio for the leg
+            - ratio_qty (int): Quantity ratio for the leg (1-4)
         order_class (Optional[OrderClass]): Order class (SIMPLE, BRACKET, OCO, OTO, MLEG)
             Defaults to SIMPLE for single leg, MLEG for multi-leg
         quantity (int): Base quantity for the order (default: 1)
+        time_in_force (TimeInForce): Time in force for the order (default: DAY)
+        extended_hours (bool): Whether to allow execution during extended hours (default: False)
     
     Returns:
-        str: Formatted string containing order details
+        str: Formatted string containing order details including:
+            - Order ID and Client Order ID
+            - Order Class and Type
+            - Time in Force and Status
+            - Quantity and Position Intent
+            - Leg Details (for multi-leg orders):
+                * Symbol and Side
+                * Ratio Quantity
+                * Position Intent
+                * Status
+                * Asset Class
+                * Created/Updated Timestamps
+    
+    Note:
+        Some option strategies may require specific account permissions:
+        - Level 1: Covered calls
+        - Level 2: Long calls, puts, cash-secured puts, Long Straddles
+        - Level 3: Spreads and combinations: Butterfly Spreads, Straddles, Strangles, Calendar Spreads (except for short call calendar spread, short strangles, short straddles)
+        - Level 4: Uncovered options (naked calls/puts), Short Strangles, Short Straddles, Short Call Calendar Spread
+        If you receive a permission error, please check your account's option trading level.
     """
     try:
         # Validate legs
         if not legs:
             return "Error: No option legs provided"
+        if len(legs) > 4:
+            return "Error: Maximum of 4 legs allowed for option orders"
         
         # Validate quantity
         if quantity <= 0:
@@ -1150,10 +1335,11 @@ async def place_option_market_order(
         order_data = MarketOrderRequest(
             qty=quantity,
             order_class=order_class,
-            time_in_force=TimeInForce.DAY,
+            time_in_force=time_in_force,
+            extended_hours=extended_hours,
             client_order_id=f"mcp_opt_{int(time.time())}",
             position_intent=position_intent,
-            type=OrderType.MARKET  # Explicitly set order type
+            type=OrderType.MARKET
         )
         
         # Add legs only for multi-leg orders
@@ -1171,22 +1357,29 @@ async def place_option_market_order(
                 Option Market Order Placed Successfully:
                 --------------------------------------
                 Order ID: {order.id}
+                Client Order ID: {order.client_order_id}
                 Order Class: {order.order_class}
+                Order Type: {order.type}
                 Time In Force: {order.time_in_force}
                 Status: {order.status}
-                Client Order ID: {order.client_order_id}
                 Quantity: {order.qty}
                 Position Intent: {order.position_intent}
-                Type: {order.type}
+                Created At: {order.created_at}
+                Updated At: {order.updated_at}
                 """
         
-        if order_class == OrderClass.MLEG:
+        if order_class == OrderClass.MLEG and order.legs:
             result += "\nLegs:\n"
             for leg in order.legs:
                 result += f"""
                         Symbol: {leg.symbol}
                         Side: {leg.side}
                         Ratio Quantity: {leg.ratio_qty}
+                        Position Intent: {leg.position_intent}
+                        Status: {leg.status}
+                        Asset Class: {leg.asset_class}
+                        Created At: {leg.created_at}
+                        Updated At: {leg.updated_at}
                         -------------------------
                         """
         else:
@@ -1198,106 +1391,152 @@ async def place_option_market_order(
         
         return result
         
-    except Exception as e:
-        return f"Error placing option order: {str(e)}"
-
-@mcp.tool()
-async def get_option_snapshot(symbol_or_symbols: Union[str, List[str]], feed: Optional[OptionsFeed] = None) -> str:
-    """
-    Retrieves snapshots of option contracts including latest trade, quote, implied volatility, and Greeks.
-    
-    Args:
-        symbol_or_symbols (Union[str, List[str]]): Single option symbol or list of option symbols
-        feed (Optional[OptionsFeed]): The source feed of the data (opra or indicative).
-            Default: opra if the user has the options subscription, indicative otherwise.
-    
-    Returns:
-        str: Formatted string containing snapshot information including:
-            - Latest Quote (bid/ask prices, sizes, exchanges, conditions, tape)
-            - Latest Trade (price, size, exchange, conditions, tape)
-            - Implied Volatility
-            - Greeks (delta, gamma, rho, theta, vega)
-    """
-    try:
-        # Create snapshot request
-        request = OptionSnapshotRequest(
-            symbol_or_symbols=symbol_or_symbols,
-            feed=feed
-        )
-        
-        # Get snapshots
-        snapshots = option_historical_data_client.get_option_snapshot(request)
-        
-        # Format the response
-        result = "Option Snapshots:\n"
-        result += "================\n\n"
-        
-        # Handle both single symbol and list of symbols
-        symbols = [symbol_or_symbols] if isinstance(symbol_or_symbols, str) else symbol_or_symbols
-        
-        for symbol in symbols:
-            snapshot = snapshots.get(symbol)
-            if snapshot is None:
-                result += f"No data available for {symbol}\n"
-                continue
+    except APIError as api_error:
+        error_message = str(api_error)
+        if "40310000" in error_message and "not eligible to trade uncovered option contracts" in error_message:
+            # Check if it's a short straddle by examining the legs
+            is_short_straddle = False
+            is_short_strangle = False
+            is_short_calendar = False
+            
+            if order_class == OrderClass.MLEG and len(order_legs) == 2:
+                # Check for short straddle (same strike, same expiration, both short)
+                if (order_legs[0].side == OrderSide.SELL and 
+                    order_legs[1].side == OrderSide.SELL and
+                    order_legs[0].symbol.split('C')[0] == order_legs[1].symbol.split('P')[0]):
+                    is_short_straddle = True
+                # Check for short strangle (different strikes, same expiration, both short)
+                elif (order_legs[0].side == OrderSide.SELL and 
+                      order_legs[1].side == OrderSide.SELL):
+                    is_short_strangle = True
+                # Check for short calendar spread (same strike, different expirations, both short)
+                elif (order_legs[0].side == OrderSide.SELL and 
+                      order_legs[1].side == OrderSide.SELL):
+                    # Extract option type (C for call, P for put) and expiration dates
+                    leg1_type = 'C' if 'C' in order_legs[0].symbol else 'P'
+                    leg2_type = 'C' if 'C' in order_legs[1].symbol else 'P'
+                    leg1_exp = order_legs[0].symbol.split(leg1_type)[1][:6]
+                    leg2_exp = order_legs[1].symbol.split(leg2_type)[1][:6]
+                    
+                    # Check if it's a short call calendar spread (both calls, longer-term is sold)
+                    if (leg1_type == 'C' and leg2_type == 'C' and 
+                        leg1_exp != leg2_exp):
+                        is_short_calendar = True
+            
+            if is_short_straddle:
+                return """
+                Error: Account not eligible to trade short straddles.
                 
-            result += f"Symbol: {symbol}\n"
-            result += "-----------------\n"
+                This error occurs because short straddles require Level 4 options trading permission.
+                A short straddle involves:
+                - Selling a call option
+                - Selling a put option
+                - Both options have the same strike price and expiration
+                
+                Required Account Level:
+                - Level 4 options trading permission is required
+                - Please contact your broker to upgrade your account level if needed
+                
+                Alternative Strategies:
+                - Consider using a long straddle instead
+                - Use a debit spread strategy
+                - Implement a covered call or cash-secured put
+                """
+            elif is_short_strangle:
+                return """
+                Error: Account not eligible to trade short strangles.
+                
+                This error occurs because short strangles require Level 4 options trading permission.
+                A short strangle involves:
+                - Selling an out-of-the-money call option
+                - Selling an out-of-the-money put option
+                - Both options have the same expiration
+                
+                Required Account Level:
+                - Level 4 options trading permission is required
+                - Please contact your broker to upgrade your account level if needed
+                
+                Alternative Strategies:
+                - Consider using a long strangle instead
+                - Use a debit spread strategy
+                - Implement a covered call or cash-secured put
+                """
+            elif is_short_calendar:
+                return """
+                Error: Account not eligible to trade short calendar spreads.
+                
+                This error occurs because short calendar spreads require Level 4 options trading permission.
+                A short calendar spread involves:
+                - Selling a longer-term option
+                - Selling a shorter-term option
+                - Both options have the same strike price
+                
+                Required Account Level:
+                - Level 4 options trading permission is required
+                - Please contact your broker to upgrade your account level if needed
+                
+                Alternative Strategies:
+                - Consider using a long calendar spread instead
+                - Use a debit spread strategy
+                - Implement a covered call or cash-secured put
+                """
+            else:
+                return """
+                Error: Account not eligible to trade uncovered option contracts.
+                
+                This error occurs when attempting to place an order that could result in an uncovered position.
+                Common scenarios include:
+                1. Selling naked calls
+                2. Calendar spreads where the short leg expires after the long leg
+                3. Other strategies that could leave uncovered positions
+                
+                Required Account Level:
+                - Level 4 options trading permission is required for uncovered options
+                - Please contact your broker to upgrade your account level if needed
+                
+                Alternative Strategies:
+                - Consider using covered calls instead of naked calls
+                - Use debit spreads instead of calendar spreads
+                - Ensure all positions are properly hedged
+                """
+        elif "403" in error_message:
+            return f"""
+            Error: Permission denied for option trading.
             
-            # Latest Quote
-            if snapshot.latest_quote:
-                quote = snapshot.latest_quote
-                result += f"Latest Quote:\n"
-                result += f"  Bid Price: ${quote.bid_price:.2f}\n"
-                result += f"  Ask Price: ${quote.ask_price:.2f}\n"
-                result += f"  Bid Size: {quote.bid_size}\n"
-                result += f"  Ask Size: {quote.ask_size}\n"
-                if quote.bid_exchange:
-                    result += f"  Bid Exchange: {quote.bid_exchange}\n"
-                if quote.ask_exchange:
-                    result += f"  Ask Exchange: {quote.ask_exchange}\n"
-                if quote.conditions:
-                    result += f"  Conditions: {quote.conditions}\n"
-                if quote.tape:
-                    result += f"  Tape: {quote.tape}\n"
-                result += f"  Timestamp: {quote.timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+            Possible reasons:
+            1. Insufficient account level for the requested strategy
+            2. Account restrictions on option trading
+            3. Missing required permissions
             
-            # Latest Trade
-            if snapshot.latest_trade:
-                trade = snapshot.latest_trade
-                result += f"Latest Trade:\n"
-                result += f"  Price: ${trade.price:.2f}\n"
-                result += f"  Size: {trade.size}\n"
-                if trade.exchange:
-                    result += f"  Exchange: {trade.exchange}\n"
-                if trade.conditions:
-                    result += f"  Conditions: {trade.conditions}\n"
-                if trade.tape:
-                    result += f"  Tape: {trade.tape}\n"
-                if trade.id:
-                    result += f"  Trade ID: {trade.id}\n"
-                result += f"  Timestamp: {trade.timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+            Please check:
+            1. Your account's option trading level
+            2. Any specific restrictions on your account
+            3. Required permissions for the strategy you're trying to implement
             
-            # Implied Volatility
-            if snapshot.implied_volatility is not None:
-                result += f"Implied Volatility: {snapshot.implied_volatility:.2%}\n"
+            Original error: {error_message}
+            """
+        else:
+            return f"""
+            Error placing option order: {error_message}
             
-            # Greeks
-            if snapshot.greeks:
-                greeks = snapshot.greeks
-                result += f"Greeks:\n"
-                result += f"  Delta: {greeks.delta:.4f}\n"
-                result += f"  Gamma: {greeks.gamma:.4f}\n"
-                result += f"  Rho: {greeks.rho:.4f}\n"
-                result += f"  Theta: {greeks.theta:.4f}\n"
-                result += f"  Vega: {greeks.vega:.4f}\n"
+            Please check:
+            1. All option symbols are valid
+            2. Your account has sufficient buying power
+            3. The market is open for trading
+            4. Your account has the required permissions
+            """
             
-            result += "\n"
-        
-        return result
-        
     except Exception as e:
-        return f"Error retrieving option snapshots: {str(e)}"
+        return f"""
+        Unexpected error placing option order: {str(e)}
+        
+        Please try:
+        1. Verifying all input parameters
+        2. Checking your account status
+        3. Ensuring market is open
+        4. Contacting support if the issue persists
+        """
+
 
 # Run the server
 if __name__ == "__main__":
