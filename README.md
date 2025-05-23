@@ -118,8 +118,8 @@ To enable **live trading with real funds**, update the following configuration f
            "/path/to/alpaca_mcp_server.py"
          ],
          "env": {
-           "API_KEY_ID": "your_alpaca_api_key",
-           "API_SECRET_KEY": "your_alpaca_secret_key"
+           "API_KEY_ID": "your_alpaca_live_account_api_key",
+           "API_SECRET_KEY": "your_alpaca_live_account_secret_key"
          }
        }
      }
