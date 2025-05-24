@@ -6,7 +6,7 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 
 - **Market Data**
   - Real-time quotes, trades, and price bars for stocks
-  - Historical OHLCV data and trade history
+  - Historical price data and trading history
   - Option contract quotes and Greeks (via snapshots)
 - **Account Management**
   - View balances, buying power, and account status
@@ -19,7 +19,7 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
   - Cancel orders individually or in bulk
   - Retrieve full order history
 - **Options Trading**
-  - Search and retrieve option contracts by expiration or strike
+  - Search and view option contracts by expiration or strike price
   - Place multi-leg options strategies
   - Get latest quotes and Greeks for contracts
 - **Market Status & Corporate Actions**
@@ -100,7 +100,7 @@ python -m alpaca_mcp_server
 
 ## API Key Configuration for Live Trading
 
-This MCP server connects to Alpaca’s **paper trading API** by default for safe testing.
+This MCP server connects to Alpaca's **paper trading API** by default for safe testing.
 To enable **live trading with real funds**, update the following configuration files:
 
 ### 🔐 Set Your API Credentials in Two Places:
@@ -185,10 +185,10 @@ To enable **live trading with real funds**, update the following configuration f
 * `get_all_assets(status)` – List all tradable instruments
 
 ## Example Natural Language Queries
-See the “Example Queries” section below for 50 real examples covering everything from trading to corporate data to option strategies.
+See the "Example Queries" section below for 50 real examples covering everything from trading to corporate data to option strategies.
 
 ### Basic Trading
-1. What’s my current account balance and buying power?
+1. What's my current account balance and buying power?
 2. Show me my current positions.
 3. Buy 10 shares of AAPL at market price.
 4. Sell 5 shares of TSLA with a limit price of $300.
@@ -220,7 +220,7 @@ See the “Example Queries” section below for 50 real examples covering everyt
 26. List earnings announcements coming tomorrow.
 
 ### Historical & Real-time Data
-27. Show me AAPL’s daily price history for the last 5 trading days.
+27. Show me AAPL's daily price history for the last 5 trading days.
 28. What was the closing price of TSLA yesterday?
 29. Get the latest bar for GOOG.
 30. What was the latest trade price for NVDA?
@@ -243,15 +243,15 @@ See the “Example Queries” section below for 50 real examples covering everyt
 43. List all my existing watchlists.
 
 ### Asset Information
-44. Search for details about the asset ‘AAPL’.
+44. Search for details about the asset 'AAPL'.
 45. List all tradeable US equities.
 46. Show me all active crypto assets.
-47. Filter all assets with status ‘active’.
-48. Show me details for the stock with symbol ‘GOOGL’.
+47. Filter all assets with status 'active'.
+48. Show me details for the stock with symbol 'GOOGL'.
 
 ### Combined Scenarios
-49. Place a market order to buy 2 AAPL call options and update my “Earnings Bets” watchlist with AAPL.
-50. Get today’s market clock and show me my buying power before placing a limit buy order for TSLA at $180.
+49. Place a market order to buy 2 AAPL call options and update my "Earnings Bets" watchlist with AAPL.
+50. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $180.
 
 ## ⚠️ Security Notice
 
