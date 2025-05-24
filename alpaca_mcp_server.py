@@ -1251,7 +1251,7 @@ async def get_option_snapshot(symbol_or_symbols: Union[str, List[str]], feed: Op
 @mcp.tool()
 async def place_option_market_order(
     legs: List[Dict[str, Any]],
-    order_class: Optional[OrderClass] = None,
+    order_class: Optional[Union[str, OrderClass]] = None,
     quantity: int = 1,
     time_in_force: TimeInForce = TimeInForce.DAY,
     extended_hours: bool = False
@@ -1265,8 +1265,8 @@ async def place_option_market_order(
             - symbol (str): Option contract symbol (e.g., 'AAPL230616C00150000')
             - side (str): 'buy' or 'sell'
             - ratio_qty (int): Quantity ratio for the leg (1-4)
-        order_class (Optional[OrderClass]): Order class (SIMPLE, BRACKET, OCO, OTO, MLEG)
-            Defaults to SIMPLE for single leg, MLEG for multi-leg
+        order_class (Optional[Union[str, OrderClass]]): Order class ('simple', 'bracket', 'oco', 'oto', 'mleg' or OrderClass enum)
+            Defaults to 'simple' for single leg, 'mleg' for multi-leg
         quantity (int): Base quantity for the order (default: 1)
         time_in_force (TimeInForce): Time in force for the order (default: DAY)
         extended_hours (bool): Whether to allow execution during extended hours (default: False)
@@ -1276,21 +1276,20 @@ async def place_option_market_order(
             - Order ID and Client Order ID
             - Order Class and Type
             - Time in Force and Status
-            - Quantity and Position Intent
+            - Quantity
             - Leg Details (for multi-leg orders):
                 * Symbol and Side
                 * Ratio Quantity
-                * Position Intent
                 * Status
                 * Asset Class
                 * Created/Updated Timestamps
     
     Note:
         Some option strategies may require specific account permissions:
-        - Level 1: Covered calls
-        - Level 2: Long calls, puts, cash-secured puts, Long Straddles
+        - Level 1: Covered calls, Covered puts, Cash-Secured put, etc.
+        - Level 2: Long calls, Long puts, cash-secured puts, etc.
         - Level 3: Spreads and combinations: Butterfly Spreads, Straddles, Strangles, Calendar Spreads (except for short call calendar spread, short strangles, short straddles)
-        - Level 4: Uncovered options (naked calls/puts), Short Strangles, Short Straddles, Short Call Calendar Spread
+        - Level 4: Uncovered options (naked calls/puts), Short Strangles, Short Straddles, Short Call Calendar Spread, etc.
         If you receive a permission error, please check your account's option trading level.
     """
     try:
@@ -1303,6 +1302,22 @@ async def place_option_market_order(
         # Validate quantity
         if quantity <= 0:
             return "Error: Quantity must be positive"
+        
+        # Convert order_class string to enum if needed
+        if isinstance(order_class, str):
+            order_class = order_class.upper()
+            if order_class == 'SIMPLE':
+                order_class = OrderClass.SIMPLE
+            elif order_class == 'BRACKET':
+                order_class = OrderClass.BRACKET
+            elif order_class == 'OCO':
+                order_class = OrderClass.OCO
+            elif order_class == 'OTO':
+                order_class = OrderClass.OTO
+            elif order_class == 'MLEG':
+                order_class = OrderClass.MLEG
+            else:
+                return f"Invalid order class: {order_class}. Must be one of: simple, bracket, oco, oto, mleg"
         
         # Determine order class if not provided
         if order_class is None:
@@ -1330,22 +1345,27 @@ async def place_option_market_order(
             ))
         
         # Create market order request
-        order_data = MarketOrderRequest(
-            qty=quantity,
-            order_class=order_class,
-            time_in_force=time_in_force,
-            extended_hours=extended_hours,
-            client_order_id=f"mcp_opt_{int(time.time())}",
-            type=OrderType.MARKET
-        )
-        
-        # Add legs only for multi-leg orders
         if order_class == OrderClass.MLEG:
-            order_data.legs = order_legs
+            order_data = MarketOrderRequest(
+                qty=quantity,
+                order_class=order_class,
+                time_in_force=time_in_force,
+                extended_hours=extended_hours,
+                client_order_id=f"mcp_opt_{int(time.time())}",
+                type=OrderType.MARKET,
+                legs=order_legs  # Set legs directly in the constructor for multi-leg orders
+            )
         else:
-            # For single-leg orders, use the first leg's symbol and set position intent
-            order_data.symbol = order_legs[0].symbol
-            order_data.position_intent = PositionIntent.BTO if order_legs[0].side == OrderSide.BUY else PositionIntent.STO
+            # For single-leg orders
+            order_data = MarketOrderRequest(
+                symbol=order_legs[0].symbol,
+                qty=quantity,
+                order_class=order_class,
+                time_in_force=time_in_force,
+                extended_hours=extended_hours,
+                client_order_id=f"mcp_opt_{int(time.time())}",
+                type=OrderType.MARKET
+            )
         
         # Submit order
         order = trade_client.submit_order(order_data)
@@ -1361,7 +1381,6 @@ async def place_option_market_order(
                 Time In Force: {order.time_in_force}
                 Status: {order.status}
                 Quantity: {order.qty}
-                Position Intent: {order.position_intent}
                 Created At: {order.created_at}
                 Updated At: {order.updated_at}
                 """
@@ -1373,7 +1392,6 @@ async def place_option_market_order(
                         Symbol: {leg.symbol}
                         Side: {leg.side}
                         Ratio Quantity: {leg.ratio_qty}
-                        Position Intent: {leg.position_intent}
                         Status: {leg.status}
                         Asset Class: {leg.asset_class}
                         Created At: {leg.created_at}
