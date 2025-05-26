@@ -52,11 +52,11 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    pip install mcp alpaca-py python-dotenv
    ```
 
-3. Add a `.env` file for your credentials:
+3. Add (or Edit) a `.env` file for your credentials in the same directory:
 
    ```
-   API_KEY_ID=your_alpaca_api_key
-   API_SECRET_KEY=your_alpaca_secret_key
+   API_KEY=your_alpaca_api_key_for_paper_trading
+   API_SECRET=your_alpaca_secret_key_for_paper_trading
    ```
 
 ## Usage
@@ -244,8 +244,8 @@ See the "Example Queries" section below for 50 real examples covering everything
 
 ### Asset Information
 44. Search for details about the asset 'AAPL'.
-45. List all tradeable US equities.
-46. Show me all active crypto assets.
+45. List all tradeable US Large-cap stocks.
+46. Show me the top 5 tradable crypto assets by trading volume.
 47. Filter all assets with status 'active'.
 48. Show me details for the stock with symbol 'GOOGL'.
 

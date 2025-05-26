@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timedelta, date
 from mcp.server.fastmcp import FastMCP
@@ -17,22 +18,20 @@ from alpaca.common.enums import SupportedCurrencies
 import time
 from alpaca.common.exceptions import APIError
 
-# Please do not change these variables
-trade_api_url = None
-trade_api_wss = None
-data_api_url = None
-stream_data_wss = None
-
 # Initialize FastMCP server
 mcp = FastMCP("alpaca-trading")
 
 # Initialize Alpaca clients using environment variables
-# Import our secret.py file within the same directory
-import secret
-API_KEY = secret.API_KEY
-API_SECRET = secret.API_SECRET
-PAPER = secret.PAPER
-trade_api_url = secret.trade_api_url
+# Import our .env file within the same directory
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
+PAPER = os.getenv("PAPER")
+trade_api_url = os.getenv("trade_api_url")
+trade_api_wss = os.getenv("trade_api_wss")
+data_api_url = os.getenv("data_api_url")
+stream_data_wss = os.getenv("stream_data_wss")
 
 # Check if keys are available
 if not API_KEY or not API_SECRET:
