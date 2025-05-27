@@ -54,7 +54,7 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 
 ## Usage (for Paper Trading)
 
-### Edit a `.env` file for your credentials in project directory:
+### Edit a `.env` file for your credentials in the project directory
 
    ```
    API_KEY = "your_alpaca_api_key_for_paper_trading"
