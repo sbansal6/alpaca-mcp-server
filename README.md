@@ -52,18 +52,18 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    pip install mcp alpaca-py python-dotenv
    ```
 
-3. Add (or Edit) a `.env` file for your credentials in the same directory:
+## Usage (for Paper Trading)
 
-  ```
+### Add (or Edit) a `.env` file for your credentials in the same directory as `alpaca_mcp_server.py`:
+
+   ```
    API_KEY = "your_alpaca_api_key_for_paper_trading"
    API_SECRET = "your_alpaca_secret_key_for_paper_trading"
-  ```
-
-## Usage
+   ```
 
 ### Start the MCP Server
 
-From the project directory:
+Open a terminal and run the command below from the project directory:
 
 ```bash
 python alpaca_mcp_server.py
