@@ -1282,6 +1282,8 @@ async def place_option_market_order(
                 * Status
                 * Asset Class
                 * Created/Updated Timestamps
+                * Filled Price (if filled)
+                * Filled Time (if filled)
     
     Note:
         Some option strategies may require specific account permissions:
@@ -1395,12 +1397,16 @@ async def place_option_market_order(
                         Asset Class: {leg.asset_class}
                         Created At: {leg.created_at}
                         Updated At: {leg.updated_at}
+                        Filled Price: {leg.filled_avg_price if hasattr(leg, 'filled_avg_price') else 'Not filled'}
+                        Filled Time: {leg.filled_at if hasattr(leg, 'filled_at') else 'Not filled'}
                         -------------------------
                         """
         else:
             result += f"""
                     Symbol: {order.symbol}
                     Side: {order_legs[0].side}
+                    Filled Price: {order.filled_avg_price if hasattr(order, 'filled_avg_price') else 'Not filled'}
+                    Filled Time: {order.filled_at if hasattr(order, 'filled_at') else 'Not filled'}
                     -------------------------
                     """
         
