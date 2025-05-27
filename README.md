@@ -52,7 +52,7 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    pip install mcp alpaca-py python-dotenv
    ```
 
-## Usage (for Paper Trading)
+## Usage (for Paper Trading) with Claude Desktop
 
 ### Edit a `.env` file for your credentials in the project directory
 
