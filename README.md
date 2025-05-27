@@ -206,7 +206,7 @@ See the "Example Queries" section below for 50 real examples covering everything
 14. Retrieve the option snapshot for SPY250627P00400000.
 15. Liquidate my position in 2 contracts of QQQ calls expiring next week.
 16. Place a market order to buy 1 call option on AAPL expiring next Friday.
-17. What are the Greeks for TSLA250620P00500000?
+17. What are the option Greeks for TSLA250620P00500000?
 18. Find all TSLA option contracts with strike prices within 5% of the current market price.
 19. Get all contracts for SPY expiring in June that are call options.
 20. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
@@ -252,6 +252,63 @@ See the "Example Queries" section below for 50 real examples covering everything
 ### Combined Scenarios
 49. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $180.
 50. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
+
+## Example Outputs
+
+The MCP server provides detailed, well-formatted responses for various trading queries. Here are some examples:
+
+### Option Greeks Analysis
+Query: "What are the option Greeks for TSLA250620P00500000?"
+
+Response:
+Option Details:
+- Current Bid/Ask: $142.62 / $143.89
+- Last Trade: $138.85
+- Implied Volatility: 92.54%
+
+Greeks:
+- Delta: -0.8968 (Very Bearish)
+- Gamma: 0.0021 (Low Rate of Change)
+- Theta: -0.2658 (Time Decay: $26.58/day)
+- Vega: 0.1654 (Volatility Sensitivity)
+- Rho: -0.3060 (Interest Rate Sensitivity)
+
+Key Insights:
+- High Implied Volatility (92.54%)
+- Deep In-the-Money (Delta: -0.90)
+- Significant Time Decay ($27/day)
+
+### Multi-Leg Option Order
+Query: "Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike."
+
+Response:
+Order Details:
+- Order ID: fc1c04b1-8afa-4b2d-aab1-49613bbed7cb
+- Order Class: Multi-Leg (MLEG)
+- Status: Pending New
+- Quantity: 1 spread
+
+Spread Legs:
+1. Long Leg (BUY):
+   - AAPL250606C00190000 ($190.00 strike)
+   - Status: Pending New
+
+2. Short Leg (SELL):
+   - AAPL250606C00200000 ($200.00 strike)
+   - Status: Pending New
+
+Strategy Summary:
+- Max Profit: $10.00 per spread
+- Max Loss: Net debit paid
+- Breakeven: $190 + net debit paid
+
+These examples demonstrate the server's ability to provide:
+- Detailed market data analysis
+- Comprehensive order execution details
+- Clear strategy explanations
+- Well-formatted, easy-to-read responses
+
+The server maintains this level of detail and formatting across all supported queries, making it easy to understand and act on the information provided.
 
 ## ⚠️ Security Notice
 
