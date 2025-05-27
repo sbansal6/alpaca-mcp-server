@@ -250,8 +250,8 @@ See the "Example Queries" section below for 50 real examples covering everything
 48. Show me details for the stock with symbol 'GOOGL'.
 
 ### Combined Scenarios
-49. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
-50. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $180.
+49. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $180.
+50. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
 
 ## ⚠️ Security Notice
 
