@@ -55,8 +55,8 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 3. Add (or Edit) a `.env` file for your credentials in the same directory:
 
    ```
-   API_KEY=your_alpaca_api_key_for_paper_trading
-   API_SECRET=your_alpaca_secret_key_for_paper_trading
+   API_KEY = "your_alpaca_api_key_for_paper_trading"
+   API_SECRET = "your_alpaca_secret_key_for_paper_trading"
    ```
 
 ## Usage
@@ -126,11 +126,11 @@ To enable **live trading with real funds**, update the following configuration f
    }
    ```
 
-2. **`secret.py` in the project directory**
+2. **`.env` in the project directory**
 
    ```python
-   API_KEY = "your_alpaca_api_key"
-   API_SECRET = "your_alpaca_secret_key"
+   API_KEY = "your_alpaca_live_account_api_key"
+   API_SECRET = "your_alpaca_live_account_secret_key"
    PAPER = False
    ```
 
