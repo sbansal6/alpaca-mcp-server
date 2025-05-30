@@ -57,8 +57,8 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 ### Edit a `.env` file for your credentials in the project directory
 
    ```
-   API_KEY = "your_alpaca_api_key_for_paper_trading"
-   API_SECRET = "your_alpaca_secret_key_for_paper_trading"
+   ALPACA_API_KEY = "your_alpaca_api_key_for_paper_account"
+   ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_paper_account"
    ```
 
 ### Start the MCP Server
@@ -90,8 +90,8 @@ python -m alpaca_mcp_server
         "/path/to/alpaca_mcp_server.py"
       ],
       "env": {
-        "API_KEY_ID": "your_alpaca_api_key",
-        "API_SECRET_KEY": "your_alpaca_secret_key"
+        "ALPACA_API_KEY": "your_alpaca_api_key_for_paper_account",
+        "ALPACA_SECRET_KEY": "your_alpaca_secret_key_for_paper_account"
       }
     }
   }
@@ -118,8 +118,8 @@ To enable **live trading with real funds**, update the following configuration f
            "/path/to/alpaca_mcp_server.py"
          ],
          "env": {
-           "API_KEY_ID": "your_alpaca_api_key_for_live_trading",
-           "API_SECRET_KEY": "your_alpaca_secret_key_for_live_trading"
+           "ALPACA_API_KEY": "your_alpaca_api_key_for_live_account",
+           "ALPACA_SECRET_KEY": "your_alpaca_secret_key_for_live_account"
          }
        }
      }
@@ -129,8 +129,8 @@ To enable **live trading with real funds**, update the following configuration f
 2. **`.env` in the project directory**
 
    ```
-   API_KEY = "your_alpaca_api_key_for_live_trading"
-   API_SECRET = "your_alpaca_secret_key_for_live_trading"
+   ALPACA_API_KEY = "your_alpaca_api_key_for_live_account"
+   ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_live_account"
    PAPER = False
    ```
 
@@ -155,8 +155,7 @@ To enable **live trading with real funds**, update the following configuration f
 ### Orders
 
 * `get_orders(status, limit)` – Retrieve all or filtered orders
-* `place_stock_market_order(symbol, side, quantity)` – Buy/sell at market
-* `place_limit_order(symbol, side, quantity, limit_price)` – Submit limit order
+* `place_stock_order(symbol, side, quantity, order_type="market", limit_price=None, stop_price=None, trail_price=None, trail_percent=None, time_in_force="day", extended_hours=False, client_order_id=None)` – Place a stock order of any type (market, limit, stop, stop_limit, trailing_stop)
 * `cancel_order_by_id(order_id)` – Cancel a specific order
 * `cancel_all_orders()` – Cancel all open orders
 
@@ -236,10 +235,10 @@ See the "Example Queries" section below for 50 real examples covering everything
 38. Get me the order history for yesterday.
 
 ### Watchlists
-39. Create a new watchlist called “Tech Stocks” with AAPL, MSFT, and NVDA.
-40. Update my “Favorites” watchlist to include TSLA and AMZN.
-41. What stocks are in my “Dividend Picks” watchlist?
-42. Remove META from my “Growth Portfolio” watchlist.
+39. Create a new watchlist called "Tech Stocks" with AAPL, MSFT, and NVDA.
+40. Update my "Favorites" watchlist to include TSLA and AMZN.
+41. What stocks are in my "Dividend Picks" watchlist?
+42. Remove META from my "Growth Portfolio" watchlist.
 43. List all my existing watchlists.
 
 ### Asset Information

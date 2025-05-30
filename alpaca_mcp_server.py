@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timedelta, date
 from mcp.server.fastmcp import FastMCP
 from alpaca.trading.client import TradingClient
-from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest, OptionLegRequest
+from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest, OptionLegRequest, StopOrderRequest, StopLimitOrderRequest, TrailingStopOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce, QueryOrderStatus, AssetStatus, CorporateActionType, CorporateActionDateType, OrderType, PositionIntent, ContractType, OrderClass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
@@ -25,8 +25,8 @@ mcp = FastMCP("alpaca-trading")
 # Import our .env file within the same directory
 load_dotenv()
 
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
+API_KEY = os.getenv("ALPACA_API_KEY")
+API_SECRET = os.getenv("ALPACA_SECRET_KEY")
 PAPER = os.getenv("PAPER")
 trade_api_url = os.getenv("trade_api_url")
 trade_api_wss = os.getenv("trade_api_wss")
@@ -133,10 +133,17 @@ async def get_open_position(symbol: str) -> str:
     """
     try:
         position = trade_client.get_open_position(symbol)
+        
+        # Check if it's an options position by looking for the options symbol pattern
+        is_option = len(symbol) > 6 and any(c in symbol for c in ['C', 'P'])
+        
+        # Format quantity based on asset type
+        quantity_text = f"{position.qty} contracts" if is_option else f"{position.qty}"
+
         return f"""
                 Position Details for {symbol}:
                 ---------------------------
-                Quantity: {position.qty} shares
+                Quantity: {quantity_text}
                 Market Value: ${float(position.market_value):.2f}
                 Average Entry Price: ${float(position.avg_entry_price):.2f}
                 Current Price: ${float(position.current_price):.2f}
@@ -280,7 +287,7 @@ async def get_stock_trades(
             for trade in trades[symbol]:
                 result += f"""
                     Time: {trade.timestamp}
-                    Price: ${float(trade.price):.2f}
+                    Price: ${float(trade.price):.6f}
                     Size: {trade.size}
                     Exchange: {trade.exchange}
                     ID: {trade.id}
@@ -326,7 +333,7 @@ async def get_stock_latest_trade(
                 Latest Trade for {symbol}:
                 ---------------------------
                 Time: {trade.timestamp}
-                Price: ${float(trade.price):.2f}
+                Price: ${float(trade.price):.6f}
                 Size: {trade.size}
                 Exchange: {trade.exchange}
                 ID: {trade.id}
@@ -450,139 +457,138 @@ async def get_orders(status: str = "all", limit: int = 10) -> str:
         return f"Error fetching orders: {str(e)}"
 
 @mcp.tool()
-async def place_stock_market_order(symbol: str, side: str, quantity: float) -> str:
+async def place_stock_order(
+    symbol: str,
+    side: str,
+    quantity: float,
+    order_type: str = "market",
+    time_in_force: str = "day",
+    limit_price: float = None,
+    stop_price: float = None,
+    trail_price: float = None,
+    trail_percent: float = None,
+    extended_hours: bool = False,
+    client_order_id: str = None
+) -> str:
     """
-    Places a market order and returns the order details.
-    
+    Places an order of any supported type (MARKET, LIMIT, STOP, STOP_LIMIT, TRAILING_STOP) using the correct Alpaca request class.
+
     Args:
         symbol (str): Stock ticker symbol (e.g., AAPL, MSFT)
         side (str): Order side (buy or sell)
         quantity (float): Number of shares to buy or sell
-    
+        order_type (str): Order type (MARKET, LIMIT, STOP, STOP_LIMIT, TRAILING_STOP). Default is MARKET.
+        time_in_force (str): Time in force for the order (default: DAY)
+        limit_price (float): Limit price (required for LIMIT, STOP_LIMIT)
+        stop_price (float): Stop price (required for STOP, STOP_LIMIT)
+        trail_price (float): Trail price (for TRAILING_STOP)
+        trail_percent (float): Trail percent (for TRAILING_STOP)
+        extended_hours (bool): Allow execution during extended hours (default: False)
+        client_order_id (str): Optional custom identifier for the order
+
     Returns:
-        str: Formatted string containing order details including:
-            - Order ID
-            - Symbol
-            - Side
-            - Quantity
-            - Type
-            - Time In Force
-            - Status
-            - Client Order ID
-            - Position Intent
+        str: Formatted string containing order details or error message.
     """
     try:
-        # Convert side string to enum
+        # Validate side
         if side.lower() == "buy":
             order_side = OrderSide.BUY
         elif side.lower() == "sell":
             order_side = OrderSide.SELL
         else:
             return f"Invalid order side: {side}. Must be 'buy' or 'sell'."
-        
-        # Create market order request
-        order_data = MarketOrderRequest(
-            symbol=symbol,
-            qty=quantity,
-            side=order_side,
-            type=OrderType.MARKET,
-            time_in_force=TimeInForce.DAY,
-            extended_hours=False,
-            client_order_id=f"mcp_{int(time.time())}",
-            position_intent=PositionIntent.BTO if order_side == OrderSide.BUY else PositionIntent.STO
-        )
-        
+
+        # Validate time_in_force
+        try:
+            tif_enum = TimeInForce[time_in_force.upper()]
+        except KeyError:
+            return f"Invalid time_in_force: {time_in_force}."
+
+        # Validate order_type
+        order_type_upper = order_type.upper()
+        if order_type_upper == "MARKET":
+            order_data = MarketOrderRequest(
+                symbol=symbol,
+                qty=quantity,
+                side=order_side,
+                type=OrderType.MARKET,
+                time_in_force=tif_enum,
+                extended_hours=extended_hours,
+                client_order_id=client_order_id or f"order_{int(time.time())}"
+            )
+        elif order_type_upper == "LIMIT":
+            if limit_price is None:
+                return "limit_price is required for LIMIT orders."
+            order_data = LimitOrderRequest(
+                symbol=symbol,
+                qty=quantity,
+                side=order_side,
+                type=OrderType.LIMIT,
+                time_in_force=tif_enum,
+                limit_price=limit_price,
+                extended_hours=extended_hours,
+                client_order_id=client_order_id or f"order_{int(time.time())}"
+            )
+        elif order_type_upper == "STOP":
+            if stop_price is None:
+                return "stop_price is required for STOP orders."
+            order_data = StopOrderRequest(
+                symbol=symbol,
+                qty=quantity,
+                side=order_side,
+                type=OrderType.STOP,
+                time_in_force=tif_enum,
+                stop_price=stop_price,
+                extended_hours=extended_hours,
+                client_order_id=client_order_id or f"order_{int(time.time())}"
+            )
+        elif order_type_upper == "STOP_LIMIT":
+            if stop_price is None or limit_price is None:
+                return "Both stop_price and limit_price are required for STOP_LIMIT orders."
+            order_data = StopLimitOrderRequest(
+                symbol=symbol,
+                qty=quantity,
+                side=order_side,
+                type=OrderType.STOP_LIMIT,
+                time_in_force=tif_enum,
+                stop_price=stop_price,
+                limit_price=limit_price,
+                extended_hours=extended_hours,
+                client_order_id=client_order_id or f"order_{int(time.time())}"
+            )
+        elif order_type_upper == "TRAILING_STOP":
+            if trail_price is None and trail_percent is None:
+                return "Either trail_price or trail_percent is required for TRAILING_STOP orders."
+            order_data = TrailingStopOrderRequest(
+                symbol=symbol,
+                qty=quantity,
+                side=order_side,
+                type=OrderType.TRAILING_STOP,
+                time_in_force=tif_enum,
+                trail_price=trail_price,
+                trail_percent=trail_percent,
+                extended_hours=extended_hours,
+                client_order_id=client_order_id or f"order_{int(time.time())}"
+            )
+        else:
+            return f"Invalid order type: {order_type}. Must be one of: MARKET, LIMIT, STOP, STOP_LIMIT, TRAILING_STOP."
+
         # Submit order
         order = trade_client.submit_order(order_data)
-        
         return f"""
-                Market Order Placed Successfully:
-                --------------------------------
-                Order ID: {order.id}
-                Symbol: {order.symbol}
-                Side: {order.side}
-                Quantity: {order.qty}
-                Type: {order.type}
-                Time In Force: {order.time_in_force}
-                Status: {order.status}
-                Client Order ID: {order.client_order_id}
-                Position Intent: {order.position_intent}
-                """
+Order Placed Successfully:
+-------------------------
+Order ID: {order.id}
+Symbol: {order.symbol}
+Side: {order.side}
+Quantity: {order.qty}
+Type: {order.type}
+Time In Force: {order.time_in_force}
+Status: {order.status}
+Client Order ID: {order.client_order_id}
+"""
     except Exception as e:
         return f"Error placing order: {str(e)}"
-
-@mcp.tool()
-async def place_limit_order(
-    symbol: str, 
-    side: str, 
-    quantity: float, 
-    limit_price: float,
-    extended_hours: bool = False,
-    client_order_id: Optional[str] = None
-) -> str:
-    """
-    Place a limit order.
-    
-    Args:
-        symbol: Stock ticker symbol (e.g., AAPL, MSFT)
-        side: Order side (buy or sell)
-        quantity: Number of shares to buy or sell
-        limit_price: Limit price for the order
-        extended_hours: Whether to allow execution during extended hours (default: False)
-        client_order_id: Optional custom identifier for the order
-    """
-    try:
-        # Input validation
-        if not symbol or not isinstance(symbol, str):
-            return "Invalid symbol: Must be a non-empty string"
-        if not isinstance(quantity, (int, float)) or quantity <= 0:
-            return "Invalid quantity: Must be a positive number"
-        if not isinstance(limit_price, (int, float)) or limit_price <= 0:
-            return "Invalid limit price: Must be a positive number"
-
-        # Convert side string to enum
-        if side.lower() == "buy":
-            order_side = OrderSide.BUY
-        elif side.lower() == "sell":
-            order_side = OrderSide.SELL
-        else:
-            return f"Invalid order side: {side}. Must be 'buy' or 'sell'."
-        
-        # Create limit order request
-        order_data = LimitOrderRequest(
-            symbol=symbol,
-            limit_price=limit_price,
-            qty=quantity,
-            side=order_side,
-            type=OrderType.LIMIT,
-            time_in_force=TimeInForce.DAY,
-            extended_hours=extended_hours,
-            client_order_id=client_order_id or f"limit_{int(time.time())}"
-        )
-        
-        # Submit order
-        order = trade_client.submit_order(order_data)
-        
-        return f"""
-                Limit Order Placed Successfully:
-                -------------------------------
-                Order ID: {order.id}
-                Symbol: {order.symbol}
-                Side: {order.side}
-                Quantity: {order.qty}
-                Type: {order.type}
-                Limit Price: ${float(order.limit_price):.2f}
-                Time In Force: {order.time_in_force}
-                Status: {order.status}
-                Client Order ID: {order.client_order_id}
-                Extended Hours: {order.extended_hours}
-                """
-    except APIError as api_error:
-        error_message = str(api_error)
-        return f"Error placing limit order: {error_message}"
-            
-    except Exception as e:
-        return f"Error placing limit order: {str(e)}"
 
 @mcp.tool()
 async def cancel_all_orders() -> str:
@@ -1198,10 +1204,10 @@ async def get_option_snapshot(symbol_or_symbols: Union[str, List[str]], feed: Op
             if snapshot.latest_quote:
                 quote = snapshot.latest_quote
                 result += f"Latest Quote:\n"
-                result += f"  Bid Price: ${quote.bid_price:.3f}\n"
+                result += f"  Bid Price: ${quote.bid_price:.6f}\n"
                 result += f"  Bid Size: {quote.bid_size}\n"
                 result += f"  Bid Exchange: {quote.bid_exchange}\n"
-                result += f"  Ask Price: ${quote.ask_price:.3f}\n"
+                result += f"  Ask Price: ${quote.ask_price:.6f}\n"
                 result += f"  Ask Size: {quote.ask_size}\n"
                 result += f"  Ask Exchange: {quote.ask_exchange}\n"
                 if quote.conditions:
@@ -1214,7 +1220,7 @@ async def get_option_snapshot(symbol_or_symbols: Union[str, List[str]], feed: Op
             if snapshot.latest_trade:
                 trade = snapshot.latest_trade
                 result += f"Latest Trade:\n"
-                result += f"  Price: ${trade.price:.3f}\n"
+                result += f"  Price: ${trade.price:.6f}\n"
                 result += f"  Size: {trade.size}\n"
                 if trade.exchange:
                     result += f"  Exchange: {trade.exchange}\n"
