@@ -236,7 +236,7 @@ See the "Example Queries" section below for 50 real examples covering everything
 
 ### Watchlists
 39. Create a new watchlist called "Tech Stocks" with AAPL, MSFT, and NVDA.
-40. Update my "Favorites" watchlist to include TSLA and AMZN.
+40. Update my "Tech Stocks" watchlist to include TSLA and AMZN.
 41. What stocks are in my "Dividend Picks" watchlist?
 42. Remove META from my "Growth Portfolio" watchlist.
 43. List all my existing watchlists.
@@ -249,7 +249,7 @@ See the "Example Queries" section below for 50 real examples covering everything
 48. Show me details for the stock with symbol 'GOOGL'.
 
 ### Combined Scenarios
-49. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $180.
+49. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $340.
 50. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
 
 ## Example Outputs

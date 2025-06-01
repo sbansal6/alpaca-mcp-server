@@ -866,7 +866,8 @@ async def get_watchlists() -> str:
             result += f"ID: {wl.id}\n"
             result += f"Created: {wl.created_at}\n"
             result += f"Updated: {wl.updated_at}\n"
-            result += f"Symbols: {', '.join(wl.assets)}\n\n"
+            # Use wl.symbols, fallback to empty list if missing
+            result += f"Symbols: {', '.join(getattr(wl, 'symbols', []) or [])}\n\n"
         return result
     except Exception as e:
         return f"Error fetching watchlists: {str(e)}"
