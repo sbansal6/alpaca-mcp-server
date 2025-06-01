@@ -250,7 +250,7 @@ See the "Example Queries" section below for 50 real examples covering everything
 
 ### Combined Scenarios
 49. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $340.
-50. Place a bull call spread using AAPL June 6th options: one with a 190.00 strike and the other with a 200.00 strike.
+50. Place a bull call spread using SPY July 3rd options: one with a 5% higher than current SPY price and the other with a 3% below than current SPY price.
 
 ## Example Outputs
 
