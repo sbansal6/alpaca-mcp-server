@@ -214,7 +214,7 @@ See the "Example Queries" section below for 50 real examples covering everything
 21. Is the US stock market currently open?
 22. What are the market open and close times today?
 23. Show me the market calendar for next week.
-24. Are there any corporate announcements for AAPL this week?
+24. Are there any corporate announcements for major tech stocks this month?
 25. What are the next dividend announcements for SPY?
 26. List earnings announcements coming tomorrow.
 
@@ -225,7 +225,7 @@ See the "Example Queries" section below for 50 real examples covering everything
 30. What was the latest trade price for NVDA?
 31. Show me the most recent quote for MSFT.
 32. Retrieve the last 100 trades for AMD.
-33. Show me intraday bars for AMZN from last Tuesday.
+33. Show me intraday bars for AMZN from last Tuesday through last Friday.
 
 ### Orders
 34. Show me all my open and filled orders from this week.
