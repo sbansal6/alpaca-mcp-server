@@ -202,7 +202,7 @@ Use this if you want to run a modified or development version of the server.
   }
 }
 ```
-- Environment variables can be set either with `-e` flags or in the `"env"` object, but not both. For Claude Desktop, use the `"env"` object.
+Environment variables can be set either with `-e` flags or in the `"env"` object, but not both. For Claude Desktop, use the `"env"` object.
 
 **Security Note:**  
 Never share your API keys or commit them to public repositories. Be cautious when passing secrets as environment variables, especially in shared or production environments.
