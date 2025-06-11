@@ -1,6 +1,6 @@
 # Alpaca MCP Server
 
-This is a Model Context Protocol (MCP) server implementation for Alpaca's Trading API. It enables large language models (LLMs) on Claude Desktop, Cursor, or VScode to interact with Alpaca's trading infrastructure using natural language. This server supports stock trading, options trading, portfolio management, watchlist handling, and real-time market data access.
+This is a Model Context Protocol (MCP) server implementation for Alpaca's Trading API. It enables large language models (LLMs) on Claude Desktop, Cursor, or VScode to interact with Alpaca's trading infrastructure using natural language (English). This server supports stock trading, options trading, portfolio management, watchlist handling, and real-time market data access.
 
 ## Features
 
@@ -35,6 +35,7 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 ## Prerequisites
 
 - Python 3.10+
+- Github account
 - Alpaca API keys (with paper or live trading access)
 - Claude for Desktop or another compatible MCP client
 
@@ -46,10 +47,18 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    cd alpaca-mcp-server
    ```
 
-2. Install the required packages:
+2. Create and activate a virtual environment:
 
    ```bash
-   pip install mcp alpaca-py python-dotenv
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+    **Note:** The virtual environment will use the Python version that was used to create it. If you run the command with Python 3.10 or newer, your virtual environment will also use Python 3.10+. If you want to confirm the version, you can run `python3 --version` after activating the virtual environment. 
+
+3. Install the required packages:
+   ```bash
+   pip install -r requirements.txt
    ```
 
 ## Usage (for Paper Trading) with Claude Desktop
@@ -59,6 +68,11 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    ```
    ALPACA_API_KEY = "your_alpaca_api_key_for_paper_account"
    ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_paper_account"
+   PAPER = True
+   TRADE_API_URL = None
+   TRDE_API_WSS = None
+   DATA_API_URL = None
+   STREAM_DATA_WSS = None
    ```
 
 ### Start the MCP Server
@@ -81,13 +95,16 @@ python -m alpaca_mcp_server
 2. Navigate to: `Settings → Developer → Edit Config`
 3. Update your `claude_desktop_config.json`:
 
+  **Note:**\
+    Replace <project_root> with the path to your cloned alpaca-mcp-server directory. This should point to the Python executable inside the virtual environment you created with `python3 -m venv venv` on terminal.
+
 ```json
 {
   "mcpServers": {
     "alpaca": {
-      "command": "python",
+      "command": "<project_root>/venv/bin/python",
       "args": [
-        "/path/to/alpaca_mcp_server.py"
+        "/path/to/alpaca-mcp-server/alpaca_mcp_server.py"
       ],
       "env": {
         "ALPACA_API_KEY": "your_alpaca_api_key_for_paper_account",
@@ -97,6 +114,7 @@ python -m alpaca_mcp_server
   }
 }
 ```
+
 
 ## API Key Configuration for Live Trading
 
@@ -113,7 +131,7 @@ To enable **live trading with real funds**, update the following configuration f
    {
      "mcpServers": {
        "alpaca": {
-         "command": "python",
+         "command": "<project_root>/venv/bin/python",
          "args": [
            "/path/to/alpaca_mcp_server.py"
          ],
@@ -132,10 +150,37 @@ To enable **live trading with real funds**, update the following configuration f
    ALPACA_API_KEY = "your_alpaca_api_key_for_live_account"
    ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_live_account"
    PAPER = False
+   TRADE_API_URL = None
+   TRDE_API_WSS = None
+   DATA_API_URL = None
+   STREAM_DATA_WSS = None
    ```
 
-### Docker Usage
+## Docker Usage
 
+**Prerequisite:**  
+You must have [Docker installed](https://docs.docker.com/get-docker/) on your system.
+
+### Run the latest published image (recommended for most users)
+```bash
+docker run -it --rm \
+  -e ALPACA_API_KEY=your_alpaca_api_key \
+  -e ALPACA_SECRET_KEY=your_alpaca_secret_key \
+  ghcr.io/chand1012/alpaca-mcp-server:latest
+```
+This pulls and runs the latest published version of the server. Replace `your_alpaca_api_key` and `your_alpaca_secret_key` with your actual keys. If the server exposes a port (e.g., 8080), add `-p 8080:8080` to the command.
+
+### Build and run locally (for development or custom changes)
+```bash
+docker build -t alpaca-mcp-server .
+docker run -it --rm \
+  -e ALPACA_API_KEY=your_alpaca_api_key \
+  -e ALPACA_SECRET_KEY=your_alpaca_secret_key \
+  alpaca-mcp-server
+```
+Use this if you want to run a modified or development version of the server.
+
+### Using with Claude Desktop
 ```json
 {
   "mcpServers": {
@@ -145,20 +190,25 @@ To enable **live trading with real funds**, update the following configuration f
         "run",
         "-i",
         "--rm",
-        "-e",
-        "ALPACA_API_KEY",
-        "-e",
-        "ALPACA_SECRET_KEY",
-        "ghcr.io/chand1012/alpaca-mcp-server"
+        "-e", "ALPACA_API_KEY",
+        "-e", "ALPACA_SECRET_KEY",
+        "ghcr.io/chand1012/alpaca-mcp-server:latest"
       ],
       "env": {
-        "ALPACA_API_KEY": "your_alpaca_api_key_for_live_account",
-        "ALPACA_SECRET_KEY": "your_alpaca_secret_key_for_live_account"
+        "ALPACA_API_KEY": "your_alpaca_api_key",
+        "ALPACA_SECRET_KEY": "your_alpaca_secret_key"
       }
     }
   }
 }
 ```
+- Environment variables can be set either with `-e` flags or in the `"env"` object, but not both. For Claude Desktop, use the `"env"` object.
+
+**Security Note:**  
+Never share your API keys or commit them to public repositories. Be cautious when passing secrets as environment variables, especially in shared or production environments.
+
+**For more advanced Docker usage:**  
+See the [official Docker documentation](https://docs.docker.com/).
 
 ## Available Tools
 
