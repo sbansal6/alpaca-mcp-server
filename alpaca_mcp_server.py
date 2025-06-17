@@ -1265,6 +1265,14 @@ async def place_option_market_order(
     """
     Places a market order for options (single or multi-leg) and returns the order details.
     Supports up to 4 legs for multi-leg orders.
+
+    Single vs Multi-Leg Orders:
+    - Single-leg: One option contract (buy/sell call or put). Uses "simple" order class.
+    - Multi-leg: Multiple option contracts executed together as one strategy (spreads, straddles, etc.). Uses "mleg" order class.
+    
+    API Processing:
+    - Single-leg orders: Sent as standard MarketOrderRequest with symbol and side
+    - Multi-leg orders: Sent as MarketOrderRequest with legs array for atomic execution
     
     Args:
         legs (List[Dict[str, Any]]): List of option legs, where each leg is a dictionary containing:
@@ -1291,6 +1299,16 @@ async def place_option_market_order(
                 * Created/Updated Timestamps
                 * Filled Price (if filled)
                 * Filled Time (if filled)
+
+    Examples:
+        # Single-leg: Buy 1 call option
+        legs = [{"symbol": "AAPL230616C00150000", "side": "buy", "ratio_qty": 1}]
+        
+        # Multi-leg: Bull call spread (executed atomically)
+        legs = [
+            {"symbol": "AAPL230616C00150000", "side": "buy", "ratio_qty": 1},
+            {"symbol": "AAPL230616C00160000", "side": "sell", "ratio_qty": 1}
+        ]
     
     Note:
         Some option strategies may require specific account permissions:
@@ -1368,6 +1386,7 @@ async def place_option_market_order(
             order_data = MarketOrderRequest(
                 symbol=order_legs[0].symbol,
                 qty=quantity,
+                side=order_legs[0].side,
                 order_class=order_class,
                 time_in_force=time_in_force,
                 extended_hours=extended_hours,
