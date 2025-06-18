@@ -53,7 +53,6 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    python3 -m venv venv
    source venv/bin/activate
    ```
-
     **Note:** The virtual environment will use the Python version that was used to create it. If you run the command with Python 3.10 or newer, your virtual environment will also use Python 3.10+. If you want to confirm the version, you can run `python3 --version` after activating the virtual environment. 
 
 3. Install the required packages:
@@ -61,13 +60,30 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    pip install -r requirements.txt
    ```
 
-## Usage (for Paper Trading) with Claude Desktop
 
-### Edit a `.env` file for your credentials in the project directory
+## Project Structure
+
+After cloning and activating the virtual environment, your directory structure should look like this:
+```
+alpaca-mcp-server/          ← This is the workspace folder (= project root)
+├── alpaca_mcp_server.py    ← Script is directly in workspace root
+├── .vscode/                ← VS Code settings (for VS Code users)
+│   └── mcp.json
+├── venv/                   ← Virtual environment folder
+│   └── bin/python
+├── .env.example            ← Environment template (use this to create .env file)
+├── .gitignore              
+├── Dockerfile              ← Docker configuration (for Docker use)
+├── .dockerignore           ← Docker ignore (for Docker use)
+├── requirements.txt           
+└── README.md
+```
+
+## Create and edit a .env file for your credentials in the project directory
 
    ```
-   ALPACA_API_KEY = "your_alpaca_api_key_for_paper_account"
-   ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_paper_account"
+   ALPACA_API_KEY = "your_alpaca_api_key"
+   ALPACA_SECRET_KEY = "your_alpaca_secret_key"
    PAPER = True
    TRADE_API_URL = None
    TRDE_API_WSS = None
@@ -75,18 +91,16 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
    STREAM_DATA_WSS = None
    ```
 
+## Claude Desktop Usage
+
+The official Claude Desktop setup document is available here: https://modelcontextprotocol.io/quickstart/user
+
 ### Start the MCP Server
 
-Open a terminal and run the command below from the project directory:
+Open a terminal in the project root directory and run the following command:
 
 ```bash
-python alpaca_mcp_server.py
-```
-
-Or use a module invocation:
-
-```bash
-python -m alpaca_mcp_server
+python alpaca_mcp_server.py # or `python -m alpaca_mcp_server`
 ```
 
 ### Claude for Desktop Configuration
@@ -114,47 +128,66 @@ python -m alpaca_mcp_server
   }
 }
 ```
+## VS Code Usage
 
+VS Code supports MCP servers through GitHub Copilot's agent mode. Here's how to set it up:
+The official VS Code setup document is available here: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
 
-## API Key Configuration for Live Trading
+**Prerequisites**
+- VS Code with GitHub Copilot extension installed and active subscription
+- Python 3.10+ and virtual environment set up (follow Installation steps above)
+- MCP support enabled in VS Code (see below)
 
-This MCP server connects to Alpaca's **paper trading API** by default for safe testing.
-To enable **live trading with real funds**, update the following configuration files:
+### 1. Enable MCP Support in VS Code
 
-### 🔐 Set Your API Credentials in Two Places:
+1. Open VS Code Settings (Ctrl/Cmd + ,)
+2. Search for "chat.mcp.enabled" to check the box to enable MCP support
+3. Search for "github.copilot.chat.experimental.mcp" to check the box to use instruction files
 
-1. **Claude for Desktop Configuration**
+### 2. Configure the MCP Server
 
-   In `claude_desktop_config.json`, provide your keys for your live account as environment variables:
+**Recommendation:** Use **workspace-specific** configuration (`.vscode/mcp.json`) instead of user-wide configuration. This allows different projects to use different API keys (multiple paper accounts or live trading) and keeps trading tools isolated from other development work.
 
-   ```json
-   {
-     "mcpServers": {
-       "alpaca": {
-         "command": "<project_root>/venv/bin/python",
-         "args": [
-           "/path/to/alpaca_mcp_server.py"
-         ],
-         "env": {
-           "ALPACA_API_KEY": "your_alpaca_api_key_for_live_account",
-           "ALPACA_SECRET_KEY": "your_alpaca_secret_key_for_live_account"
-         }
-       }
-     }
-   }
-   ```
+**For workspace-specific settings:**
 
-2. **`.env` in the project directory**
+1. Create `.vscode/mcp.json` in your project root.
+2. Add the Alpaca MCP server configuration manually to mcp.json file:
+    ```json
+    {
+      "alpaca": {
+        "type": "stdio",
+        "command": "${workspaceFolder}/venv/bin/python",
+        "args": ["${workspaceFolder}/alpaca_mcp_server.py"],
+        "env": {
+          "ALPACA_API_KEY": "your_alpaca_api_key",
+          "ALPACA_SECRET_KEY": "your_alpaca_secret_key",
+        }
+      }
+    }
+    ```
+    **Note:** Replace the "command" parameter with "${workspaceFolder}\\venv\\Scripts\\python.exe", for Windows use
 
-   ```
-   ALPACA_API_KEY = "your_alpaca_api_key_for_live_account"
-   ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_live_account"
-   PAPER = False
-   TRADE_API_URL = None
-   TRDE_API_WSS = None
-   DATA_API_URL = None
-   STREAM_DATA_WSS = None
-   ```
+**For user-wide settings:**
+
+To configure an MCP server for all your workspaces, you can add the server configuration to your user settings.json. This allows you to reuse the same server configuration across multiple projects.
+Specify the server in the `mcp` VS Code user settings (`settings.json`) to enable the MCP server across all workspaces.
+```json
+{
+  "mcp": {
+    "servers": {
+      "alpaca": {
+        "type": "stdio",
+        "command": "${workspaceFolder}/venv/bin/python",
+        "args": ["${workspaceFolder}/alpaca_mcp_server.py"],
+        "env": {
+          "ALPACA_API_KEY": "your_alpaca_api_key",
+          "ALPACA_SECRET_KEY": "your_alpaca_secret_key",
+        }
+      }
+    }
+  }
+}
+```
 
 ## Docker Usage
 
@@ -209,6 +242,45 @@ Never share your API keys or commit them to public repositories. Be cautious whe
 
 **For more advanced Docker usage:**  
 See the [official Docker documentation](https://docs.docker.com/).
+
+## API Key Configuration for Live Trading
+
+This MCP server connects to Alpaca's **paper trading API** by default for safe testing.
+To enable **live trading with real funds**, update the following configuration files:
+
+### 🔐 Set Your API Credentials in Two Places:
+
+1. **`.env` in the project directory**
+
+   ```
+   ALPACA_API_KEY = "your_alpaca_api_key_for_live_account"
+   ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_live_account"
+   PAPER = False
+   TRADE_API_URL = None
+   TRDE_API_WSS = None
+   DATA_API_URL = None
+   STREAM_DATA_WSS = None
+   ```
+2. **Claude for Desktop Configuration**
+
+   In `claude_desktop_config.json`, provide your keys for your live account as environment variables:
+
+   ```json
+   {
+     "mcpServers": {
+       "alpaca": {
+         "command": "<project_root>/venv/bin/python",
+         "args": [
+           "/path/to/alpaca_mcp_server.py"
+         ],
+         "env": {
+           "ALPACA_API_KEY": "your_alpaca_api_key_for_live_account",
+           "ALPACA_SECRET_KEY": "your_alpaca_secret_key_for_live_account"
+         }
+       }
+     }
+   }
+   ```
 
 ## Available Tools
 
