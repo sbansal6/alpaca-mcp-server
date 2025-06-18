@@ -130,7 +130,7 @@ python alpaca_mcp_server.py # or `python -m alpaca_mcp_server`
 ```
 ## VS Code Usage
 
-VS Code supports MCP servers through GitHub Copilot's agent mode. Here's how to set it up:
+VS Code supports MCP servers through GitHub Copilot's agent mode.
 The official VS Code setup document is available here: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
 
 **Prerequisites**
