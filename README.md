@@ -97,10 +97,10 @@ The official Claude Desktop setup document is available here: https://modelconte
 
 ### Start the MCP Server
 
-Open a terminal in the project root directory and run the following command:
+Open a terminal in the project root directory and run the following command (or use `python -m alpaca_mcp_server`):
 
 ```bash
-python alpaca_mcp_server.py # or `python -m alpaca_mcp_server`
+python alpaca_mcp_server.py 
 ```
 
 ### Claude for Desktop Configuration
@@ -128,6 +128,25 @@ python alpaca_mcp_server.py # or `python -m alpaca_mcp_server`
   }
 }
 ```
+
+## Claude Code Usage
+
+The `claude mcp add command` is part of [Claude Code](https://www.anthropic.com/claude-code). If you have the Claude MCP CLI tool installed (e.g. by `npm install -g @anthropic-ai/claude-code`), you can use this command to add the server to Claude Code:
+
+```bash
+claude mcp add alpaca \
+  /path/to/your/alpaca-mcp-server/venv/bin/python \
+  /path/to/your/alpaca-mcp-server/alpaca_mcp_server.py \
+  -e ALPACA_API_KEY=your_api_key \
+  -e ALPACA_SECRET_KEY=your_secret_key
+```
+
+**Note:** Replace the paths with your actual project directory paths. This command automatically adds the MCP server configuration to Claude Code without manual JSON editing.
+
+The Claude MCP CLI tool need to be installed separately. Check following official pages for availability and installation instructions
+* [Learn how to set up MCP with Claude Code](https://docs.anthropic.com/en/docs/claude-code/mcp)
+* [Install, authenticate, and start using Claude Code on your development machine](https://docs.anthropic.com/en/docs/claude-code/setup)
+
 ## VS Code Usage
 
 VS Code supports MCP servers through GitHub Copilot's agent mode.

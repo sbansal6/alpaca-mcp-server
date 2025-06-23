@@ -27,7 +27,7 @@ load_dotenv()
 
 API_KEY = os.getenv("ALPACA_API_KEY")
 API_SECRET = os.getenv("ALPACA_SECRET_KEY")
-PAPER = os.getenv("PAPER")
+PAPER = os.getenv("PAPER", "True")
 TRADE_API_URL = os.getenv("TRADE_API_URL")
 TRDE_API_WSS = os.getenv("TRDE_API_WSS")
 DATA_API_URL = os.getenv("DATA_API_URL")
