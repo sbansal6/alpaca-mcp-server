@@ -35,6 +35,8 @@ TRDE_API_WSS = os.getenv("TRDE_API_WSS")
 DATA_API_URL = os.getenv("DATA_API_URL")
 STREAM_DATA_WSS = os.getenv("STREAM_DATA_WSS")
 
+PORT = os.getenv("PORT")
+
 # Check if keys are available
 if not API_KEY or not API_SECRET:
     raise ValueError("Alpaca API credentials not found in environment variables.")
@@ -1600,7 +1602,8 @@ if __name__ == "__main__":
     # Mount the MCP SSE app to the root path
     app.router.routes.append(Mount('/', app=mcp.sse_app()))
     mcp.settings.host = "0.0.0.0"
-    mcp.settings.port = 3006
+    mcp.settings.port = PORT
+    print('starting on port',PORT)
     
     # Run FastAPI app with uvicorn instead of the MCP app directly
     uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port)
