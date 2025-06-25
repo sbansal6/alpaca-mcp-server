@@ -32,16 +32,16 @@ This is a Model Context Protocol (MCP) server implementation for Alpaca's Tradin
 - **Asset Search**
   - Query details for stocks and other Alpaca-supported assets
 
-## Prerequisites
+## 0. Prerequisites
 
 - Python 3.10+
-- Github account
+- GitHub account
 - Alpaca API keys (with paper or live trading access)
 - Claude for Desktop or another compatible MCP client
 
-## Installation
+## 1. Installation
 
-1. Clone the repository and move to the repository:
+1. Clone the repository and navigate to the directory:
    ```bash
    git clone https://github.com/alpacahq/alpaca-mcp-server.git
    cd alpaca-mcp-server
@@ -71,7 +71,7 @@ alpaca-mcp-server/          ← This is the workspace folder (= project root)
 │   └── mcp.json
 ├── venv/                   ← Virtual environment folder
 │   └── bin/python
-├── .env.example            ← Environment template (use this to create .env file)
+├── .env.example            ← Environment template (use this to create `.env` file)
 ├── .gitignore              
 ├── Dockerfile              ← Docker configuration (for Docker use)
 ├── .dockerignore           ← Docker ignore (for Docker use)
@@ -79,12 +79,12 @@ alpaca-mcp-server/          ← This is the workspace folder (= project root)
 └── README.md
 ```
 
-## Create and edit a .env file for your credentials in the project directory
+## 2. Create and edit a .env file for your credentials in the project directory
 
    ```
    ALPACA_API_KEY = "your_alpaca_api_key"
    ALPACA_SECRET_KEY = "your_alpaca_secret_key"
-   PAPER = True
+   ALPACA_PAPER_TRADE = True
    TRADE_API_URL = None
    TRDE_API_WSS = None
    DATA_API_URL = None
@@ -93,7 +93,7 @@ alpaca-mcp-server/          ← This is the workspace folder (= project root)
 
 ## Claude Desktop Usage
 
-The official Claude Desktop setup document is available here: https://modelcontextprotocol.io/quickstart/user
+To use Alpaca MCP Server with Claude Desktop, please follow the steps below. The official Claude Desktop setup document is available here: https://modelcontextprotocol.io/quickstart/user
 
 ### Start the MCP Server
 
@@ -110,7 +110,7 @@ python alpaca_mcp_server.py
 3. Update your `claude_desktop_config.json`:
 
   **Note:**\
-    Replace <project_root> with the path to your cloned alpaca-mcp-server directory. This should point to the Python executable inside the virtual environment you created with `python3 -m venv venv` on terminal.
+    Replace <project_root> with the path to your cloned alpaca-mcp-server directory. This should point to the Python executable inside the virtual environment you created with `python3 -m venv venv` in the terminal.
 
 ```json
 {
@@ -131,6 +131,8 @@ python alpaca_mcp_server.py
 
 ## Claude Code Usage
 
+To use Alpaca MCP Server with Claude Code, please follow the steps below.
+
 The `claude mcp add command` is part of [Claude Code](https://www.anthropic.com/claude-code). If you have the Claude MCP CLI tool installed (e.g. by `npm install -g @anthropic-ai/claude-code`), you can use this command to add the server to Claude Code:
 
 ```bash
@@ -143,11 +145,13 @@ claude mcp add alpaca \
 
 **Note:** Replace the paths with your actual project directory paths. This command automatically adds the MCP server configuration to Claude Code without manual JSON editing.
 
-The Claude MCP CLI tool need to be installed separately. Check following official pages for availability and installation instructions
+The Claude MCP CLI tool needs to be installed separately. Check following the official pages for availability and installation instructions
 * [Learn how to set up MCP with Claude Code](https://docs.anthropic.com/en/docs/claude-code/mcp)
 * [Install, authenticate, and start using Claude Code on your development machine](https://docs.anthropic.com/en/docs/claude-code/setup)
 
 ## VS Code Usage
+
+To use Alpaca MCP Server with VS Code, please follow the steps below.
 
 VS Code supports MCP servers through GitHub Copilot's agent mode.
 The official VS Code setup document is available here: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
@@ -170,7 +174,7 @@ The official VS Code setup document is available here: https://code.visualstudio
 **For workspace-specific settings:**
 
 1. Create `.vscode/mcp.json` in your project root.
-2. Add the Alpaca MCP server configuration manually to mcp.json file:
+2. Add the Alpaca MCP server configuration manually to the mcp.json file:
     ```json
     {
       "alpaca": {
@@ -184,11 +188,11 @@ The official VS Code setup document is available here: https://code.visualstudio
       }
     }
     ```
-    **Note:** Replace the "command" parameter with "${workspaceFolder}\\venv\\Scripts\\python.exe", for Windows use
+    **Note:** For Windows users, replace the "command" parameter with "${workspaceFolder}\\venv\\Scripts\\python.exe"
 
 **For user-wide settings:**
 
-To configure an MCP server for all your workspaces, you can add the server configuration to your user settings.json. This allows you to reuse the same server configuration across multiple projects.
+To configure an MCP server for all your workspaces, you can add the server configuration to your user settings.json file. This allows you to reuse the same server configuration across multiple projects.
 Specify the server in the `mcp` VS Code user settings (`settings.json`) to enable the MCP server across all workspaces.
 ```json
 {
@@ -209,6 +213,8 @@ Specify the server in the `mcp` VS Code user settings (`settings.json`) to enabl
 ```
 
 ## Docker Usage
+
+To use Alpaca MCP Server with Docker, please follow the steps below.
 
 **Prerequisite:**  
 You must have [Docker installed](https://docs.docker.com/get-docker/) on your system.
@@ -262,27 +268,28 @@ Never share your API keys or commit them to public repositories. Be cautious whe
 **For more advanced Docker usage:**  
 See the [official Docker documentation](https://docs.docker.com/).
 
-## API Key Configuration for Live Trading
+## 🔐 API Key Configuration for Live Trading
 
 This MCP server connects to Alpaca's **paper trading API** by default for safe testing.
 To enable **live trading with real funds**, update the following configuration files:
 
-### 🔐 Set Your API Credentials in Two Places:
+### Set Your API Credentials in Two Places:
 
-1. **`.env` in the project directory**
+1. **Update environment file in the project directory**
 
+  Provide your live account keys as environment variables in the `.env` file:
    ```
    ALPACA_API_KEY = "your_alpaca_api_key_for_live_account"
    ALPACA_SECRET_KEY = "your_alpaca_secret_key_for_live_account"
-   PAPER = False
+   ALPACA_PAPER_TRADE = False
    TRADE_API_URL = None
-   TRDE_API_WSS = None
+   TRADE_API_WSS = None
    DATA_API_URL = None
    STREAM_DATA_WSS = None
    ```
-2. **Claude for Desktop Configuration**
+2. **Update Configuration file**
 
-   In `claude_desktop_config.json`, provide your keys for your live account as environment variables:
+   For example, when using Claude Desktop, provide your live account keys as environment variables in `claude_desktop_config.json`:
 
    ```json
    {
@@ -314,7 +321,7 @@ To enable **live trading with real funds**, update the following configuration f
 ### Stock Market Data
 
 * `get_stock_quote(symbol)` – Real-time bid/ask quote
-* `get_stock_bars(symbol, start_date, end_date)` – OHLCV historical bars
+* `get_stock_bars(symbol, days=5, timeframe="1Day", limit=None, start=None, end=None)` – OHLCV historical bars with flexible timeframes (1Min, 5Min, 1Hour, 1Day, etc.)
 * `get_stock_latest_trade(symbol)` – Latest market trade price
 * `get_stock_latest_bar(symbol)` – Most recent OHLC bar
 * `get_stock_trades(symbol, start_time, end_time)` – Trade-level history
@@ -351,7 +358,7 @@ To enable **live trading with real funds**, update the following configuration f
 * `get_all_assets(status)` – List all tradable instruments
 
 ## Example Natural Language Queries
-See the "Example Queries" section below for 50 real examples covering everything from trading to corporate data to option strategies.
+See the "Example Queries" section below for 50 real examples covering everything from trading to corporate data to option strategies. If the output is long, the MCP client (e.g., Claude Desktop) may show it in the "Response" section.
 
 ### Basic Trading
 1. What's my current account balance and buying power?
@@ -392,28 +399,28 @@ See the "Example Queries" section below for 50 real examples covering everything
 30. What was the latest trade price for NVDA?
 31. Show me the most recent quote for MSFT.
 32. Retrieve the last 100 trades for AMD.
-33. Show me intraday bars for AMZN from last Tuesday through last Friday.
+33. Show me 10-minute bars for SPY for the last 2 hours of the most recent trading session.
+34. Get 5-minute intraday bars for TSLA from 10:00 AM to 12:00 PM (ET) last Tuesday.
 
 ### Orders
-34. Show me all my open and filled orders from this week.
-35. What orders do I have for AAPL?
-36. List all limit orders I placed in the past 3 days.
-37. Filter all orders by status: filled.
-38. Get me the order history for yesterday.
+35. Show me all my open and filled orders from this week.
+36. What orders do I have for AAPL?
+37. List all limit orders I placed in the past 3 days.
+38. Filter all orders by status: filled.
+39. Get me the order history for yesterday.
 
 ### Watchlists
-39. Create a new watchlist called "Tech Stocks" with AAPL, MSFT, and NVDA.
-40. Update my "Tech Stocks" watchlist to include TSLA and AMZN.
-41. What stocks are in my "Dividend Picks" watchlist?
-42. Remove META from my "Growth Portfolio" watchlist.
-43. List all my existing watchlists.
+40. Create a new watchlist called "Tech Stocks" with AAPL, MSFT, and NVDA.
+41. Update my "Tech Stocks" watchlist to include TSLA and AMZN.
+42. What stocks are in my "Dividend Picks" watchlist?
+43. Remove META from my "Growth Portfolio" watchlist.
+44. List all my existing watchlists.
 
 ### Asset Information
-44. Search for details about the asset 'AAPL'.
-45. List all tradeable US Large-cap stocks.
-46. Show me the top 5 tradable crypto assets by trading volume.
-47. Filter all assets with status 'active'.
-48. Show me details for the stock with symbol 'GOOGL'.
+45. Search for details about the asset 'AAPL'.
+46. List all tradable US large-cap stocks.
+47. Show me the top 5 tradable crypto assets by trading volume.
+48. Filter all assets with status 'active'.
 
 ### Combined Scenarios
 49. Get today's market clock and show me my buying power before placing a limit buy order for TSLA at $340.
