@@ -1,59 +1,24 @@
 import os
-import re
-import time
-from datetime import datetime, timedelta, date
-from typing import Dict, Any, List, Optional, Union
-
 from dotenv import load_dotenv
-
-from alpaca.common.enums import SupportedCurrencies
-from alpaca.common.exceptions import APIError
-from alpaca.data.enums import DataFeed, OptionsFeed
-from alpaca.data.historical.option import OptionHistoricalDataClient
-from alpaca.data.historical.stock import StockHistoricalDataClient, StockLatestTradeRequest
-from alpaca.data.live.stock import StockDataStream
-from alpaca.data.requests import (
-    OptionLatestQuoteRequest,
-    OptionSnapshotRequest,
-    Sort,
-    StockBarsRequest,
-    StockLatestBarRequest,
-    StockLatestQuoteRequest,
-    StockLatestTradeRequest,
-    StockTradesRequest,
-)
-from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
-from alpaca.trading.client import TradingClient
-from alpaca.trading.enums import (
-    AssetStatus,
-    ContractType,
-    CorporateActionDateType,
-    CorporateActionType,
-    OrderClass,
-    OrderSide,
-    OrderType,
-    PositionIntent,
-    QueryOrderStatus,
-    TimeInForce,
-)
-from alpaca.trading.models import Order
-from alpaca.trading.requests import (
-    ClosePositionRequest,
-    CreateWatchlistRequest,
-    GetAssetsRequest,
-    GetCalendarRequest,
-    GetCorporateAnnouncementsRequest,
-    GetOptionContractsRequest,
-    GetOrdersRequest,
-    LimitOrderRequest,
-    MarketOrderRequest,
-    OptionLegRequest,
-    StopLimitOrderRequest,
-    StopOrderRequest,
-    TrailingStopOrderRequest,
-    UpdateWatchlistRequest,
-)
+from typing import Dict, Any, List, Optional, Union
+from datetime import datetime, timedelta, date
 from mcp.server.fastmcp import FastMCP
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import GetOrdersRequest, MarketOrderRequest, LimitOrderRequest, GetAssetsRequest, CreateWatchlistRequest, UpdateWatchlistRequest, GetCalendarRequest, GetCorporateAnnouncementsRequest, ClosePositionRequest, GetOptionContractsRequest, OptionLegRequest, StopOrderRequest, StopLimitOrderRequest, TrailingStopOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce, QueryOrderStatus, AssetStatus, CorporateActionType, CorporateActionDateType, OrderType, PositionIntent, ContractType, OrderClass
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.historical.option import OptionHistoricalDataClient
+from alpaca.data.requests import Sort, StockBarsRequest, StockLatestQuoteRequest, StockTradesRequest, StockLatestTradeRequest, StockLatestBarRequest, OptionLatestQuoteRequest, OptionSnapshotRequest
+from alpaca.data.timeframe import TimeFrame
+from alpaca.data.live.stock import StockDataStream
+from alpaca.trading.models import Order
+from alpaca.data.enums import DataFeed, OptionsFeed
+from alpaca.common.enums import SupportedCurrencies
+import uvicorn
+from fastapi import FastAPI
+
+import time
+from alpaca.common.exceptions import APIError
 
 # Initialize FastMCP server
 mcp = FastMCP("alpaca-trading")
@@ -64,7 +29,7 @@ load_dotenv()
 
 API_KEY = os.getenv("ALPACA_API_KEY")
 API_SECRET = os.getenv("ALPACA_SECRET_KEY")
-ALPACA_PAPER_TRADE = os.getenv("ALPACA_PAPER_TRADE", "True")
+PAPER = os.getenv("PAPER", "True")
 TRADE_API_URL = os.getenv("TRADE_API_URL")
 TRDE_API_WSS = os.getenv("TRDE_API_WSS")
 DATA_API_URL = os.getenv("DATA_API_URL")
@@ -76,7 +41,7 @@ if not API_KEY or not API_SECRET:
 
 # Initialize clients
 # For trading
-trade_client = TradingClient(API_KEY, API_SECRET, paper=ALPACA_PAPER_TRADE)
+trade_client = TradingClient(API_KEY, API_SECRET, paper=PAPER)
 # For historical market data
 stock_historical_data_client = StockHistoricalDataClient(API_KEY, API_SECRET)
 # For streaming market data
@@ -230,99 +195,46 @@ async def get_stock_quote(symbol: str) -> str:
         return f"Error fetching quote for {symbol}: {str(e)}"
 
 @mcp.tool()
-async def get_stock_bars(
-    symbol: str, 
-    days: int = 5, 
-    timeframe: str = "1Day",
-    limit: Optional[int] = None,
-    start: Optional[str] = None,
-    end: Optional[str] = None
-) -> str:
+async def get_stock_bars(symbol: str, days: int = 5) -> str:
     """
-    Retrieves and formats historical price bars for a stock with configurable timeframe and time range.
+    Retrieves and formats historical price bars for a stock.
     
     Args:
         symbol (str): Stock ticker symbol (e.g., AAPL, MSFT)
-        days (int): Number of days to look back (default: 5, ignored if start/end provided)
-        timeframe (str): Bar timeframe - supports flexible Alpaca formats:
-            - Minutes: "1Min", "2Min", "3Min", "4Min", "5Min", "15Min", "30Min", etc.
-            - Hours: "1Hour", "2Hour", "3Hour", "4Hour", "6Hour", etc.
-            - Days: "1Day", "2Day", "3Day", etc.
-            - Weeks: "1Week", "2Week", etc.
-            - Months: "1Month", "2Month", etc.
-            (default: "1Day")
-        limit (Optional[int]): Maximum number of bars to return (optional)
-        start (Optional[str]): Start time in ISO format (e.g., "2023-01-01T09:30:00" or "2023-01-01")
-        end (Optional[str]): End time in ISO format (e.g., "2023-01-01T16:00:00" or "2023-01-01")
+        days (int): Number of trading days to look back (default: 5)
     
     Returns:
-        str: Formatted string containing historical price data with timestamps, OHLCV data
+        str: Formatted string containing historical price data including:
+            - Date
+            - Open
+            - High
+            - Low
+            - Close
+            - Volume
     """
     try:
-        # Parse timeframe string to TimeFrame object
-        timeframe_obj = parse_timeframe_with_enums(timeframe)
-        if timeframe_obj is None:
-            return f"Error: Invalid timeframe '{timeframe}'. Supported formats: 1Min, 2Min, 4Min, 5Min, 15Min, 30Min, 1Hour, 2Hour, 4Hour, 1Day, 1Week, 1Month, etc."
-        
-        # Parse start/end times or calculate from days
-        start_time = None
-        end_time = None
-        
-        if start:
-            try:
-                start_time = datetime.fromisoformat(start.replace('Z', '+00:00'))
-            except ValueError:
-                return f"Error: Invalid start time format '{start}'. Use ISO format like '2023-01-01T09:30:00' or '2023-01-01'"
-                
-        if end:
-            try:
-                end_time = datetime.fromisoformat(end.replace('Z', '+00:00'))
-            except ValueError:
-                return f"Error: Invalid end time format '{end}'. Use ISO format like '2023-01-01T16:00:00' or '2023-01-01'"
-        
-        # If no start/end provided, calculate from days parameter OR limit+timeframe
-        if not start_time:
-            if limit and timeframe_obj.unit_value in [TimeFrameUnit.Minute, TimeFrameUnit.Hour]:
-                # Calculate based on limit and timeframe for intraday data
-                if timeframe_obj.unit_value == TimeFrameUnit.Minute:
-                    minutes_back = limit * timeframe_obj.amount
-                    start_time = datetime.now() - timedelta(minutes=minutes_back)
-                elif timeframe_obj.unit_value == TimeFrameUnit.Hour:
-                    hours_back = limit * timeframe_obj.amount
-                    start_time = datetime.now() - timedelta(hours=hours_back)
-            else:
-                # Fall back to days parameter for daily+ timeframes
-                start_time = datetime.now() - timedelta(days=days)
-        if not end_time:
-            end_time = datetime.now()
+        # Calculate start time based on days
+        start_time = datetime.now().date() - timedelta(days=days)
         
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
-            timeframe=timeframe_obj,
-            start=start_time,
-            end=end_time,
-            limit=limit
+            timeframe=TimeFrame.Day,
+            start=start_time
         )
         
         bars = stock_historical_data_client.get_stock_bars(request_params)
         
+        # if symbol in bars and bars[symbol]:
         if bars[symbol]:
-            time_range = f"{start_time.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')}"
-            result = f"Historical Data for {symbol} ({timeframe} bars, {time_range}):\n"
+            result = f"Historical Data for {symbol} (Last {days} trading days):\n"
             result += "---------------------------------------------------\n"
             
             for bar in bars[symbol]:
-                # Format timestamp based on timeframe unit
-                if timeframe_obj.unit_value in [TimeFrameUnit.Minute, TimeFrameUnit.Hour]:
-                    time_str = bar.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                else:
-                    time_str = bar.timestamp.date()
-                
-                result += f"Time: {time_str}, Open: ${bar.open:.2f}, High: ${bar.high:.2f}, Low: ${bar.low:.2f}, Close: ${bar.close:.2f}, Volume: {bar.volume}\n"
+                result += f"Date: {bar.timestamp.date()}, Open: ${bar.open:.2f}, High: ${bar.high:.2f}, Low: ${bar.low:.2f}, Close: ${bar.close:.2f}, Volume: {bar.volume}\n"
             
             return result
         else:
-            return f"No historical data found for {symbol} with {timeframe} timeframe in the specified time range."
+            return f"No historical data found for {symbol} in the last {days} days."
     except Exception as e:
         return f"Error fetching historical data for {symbol}: {str(e)}"
 
@@ -1674,76 +1586,22 @@ async def place_option_market_order(
         4. Contacting support if the issue persists
         """
 
-def parse_timeframe_with_enums(timeframe_str: str) -> Optional[TimeFrame]:
-    """
-    Parse timeframe string to Alpaca TimeFrame object using proper enumerations.
-    Supports flexible parsing of any valid timeframe format.
-    
-    Args:
-        timeframe_str (str): Timeframe string (e.g., "1Min", "4Min", "2Hour", "1Day")
-        
-    Returns:
-        Optional[TimeFrame]: Parsed TimeFrame object using TimeFrameUnit enums or None if invalid
-        
-    Reference:
-        https://alpaca.markets/sdks/python/api_reference/data/timeframe.html#timeframeunit
-    """
-    
-    try:
-        timeframe_str = timeframe_str.strip()
-        
-        # Use predefined TimeFrame objects for common cases (more efficient)
-        predefined_timeframes = {
-            "1Min": TimeFrame.Minute,
-            "1Hour": TimeFrame.Hour, 
-            "1Day": TimeFrame.Day,
-            "1Week": TimeFrame.Week,
-            "1Month": TimeFrame.Month
-        }
-        
-        if timeframe_str in predefined_timeframes:
-            return predefined_timeframes[timeframe_str]
-        
-        # Flexible regex pattern to parse any valid timeframe format
-        # Matches: <number><unit> where unit can be Min, Hour, Day, Week, Month
-        pattern = r'^(\d+)(Min|Hour|Day|Week|Month)$'
-        match = re.match(pattern, timeframe_str, re.IGNORECASE)
-        
-        if not match:
-            return None
-            
-        amount = int(match.group(1))
-        unit_str = match.group(2).lower()
-        
-        # Map unit strings to TimeFrameUnit enums
-        unit_mapping = {
-            'min': TimeFrameUnit.Minute,
-            'hour': TimeFrameUnit.Hour,
-            'day': TimeFrameUnit.Day,
-            'week': TimeFrameUnit.Week,
-            'month': TimeFrameUnit.Month
-        }
-        
-        unit = unit_mapping.get(unit_str)
-        if unit is None:
-            return None
-            
-        # Validate amount based on unit type
-        if unit == TimeFrameUnit.Minute and amount > 59:
-            # Minutes should be reasonable (1-59)
-            return None
-        elif unit == TimeFrameUnit.Hour and amount > 23:
-            # Hours should be reasonable (1-23) 
-            return None
-        elif unit in [TimeFrameUnit.Day, TimeFrameUnit.Week, TimeFrameUnit.Month] and amount > 365:
-            # Days/weeks/months should be reasonable
-            return None
-            
-        return TimeFrame(amount, unit)
-        
-    except (ValueError, AttributeError, TypeError):
-        return None
 
+
+from starlette.routing import Mount
 # Run the server
 if __name__ == "__main__":
-    mcp.run(transport='stdio')
+    # Create a FastAPI app
+    app = FastAPI(
+        title="alpaca-trading MCP API Server",
+        description="alpaca-trading",
+        version="1.0.0"
+    )
+    # Mount the MCP SSE app to the root path
+    app.router.routes.append(Mount('/', app=mcp.sse_app()))
+    mcp.settings.host = "0.0.0.0"
+    mcp.settings.port = 3006
+    
+    # Run FastAPI app with uvicorn instead of the MCP app directly
+    uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port)
+
